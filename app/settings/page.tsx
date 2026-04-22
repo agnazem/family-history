@@ -159,7 +159,7 @@ export default function SettingsPage() {
               >
                 <span className="text-gray-700">{m.user_id}</span>
                 {m.role === "admin" && (
-                  <Crown className="w-4 h-4 text-amber-500" title="Admin" />
+                  <span title="Admin"><Crown className="w-4 h-4 text-amber-500" /></span>
                 )}
               </li>
             ))}
