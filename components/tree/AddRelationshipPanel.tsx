@@ -73,7 +73,7 @@ export function AddRelationshipPanel({
           <select
             value={type}
             onChange={(e) => setType(e.target.value as RelationshipType)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {Object.entries(RELATIONSHIP_LABELS).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
@@ -88,7 +88,7 @@ export function AddRelationshipPanel({
             required
             value={personAId}
             onChange={(e) => setPersonAId(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select person...</option>
             {sortedPeople.map((p) => (
@@ -106,7 +106,7 @@ export function AddRelationshipPanel({
             required
             value={personBId}
             onChange={(e) => setPersonBId(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select person...</option>
             {sortedPeople
@@ -132,7 +132,7 @@ export function AddRelationshipPanel({
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-amber-700 text-white py-2 rounded-lg text-sm hover:bg-amber-800 disabled:opacity-50"
+            className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? "Saving..." : "Add Relationship"}
           </button>

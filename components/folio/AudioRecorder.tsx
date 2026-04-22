@@ -20,13 +20,20 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
 
   async function startRecording() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mr = new MediaRecorder(stream);
+    const mimeType = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/mp4",
+    ].find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+
+    const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     mediaRecorder.current = mr;
     chunks.current = [];
 
     mr.ondataavailable = (e) => chunks.current.push(e.data);
     mr.onstop = () => {
-      const blob = new Blob(chunks.current, { type: "audio/webm" });
+      const blob = new Blob(chunks.current, { type: mr.mimeType || mimeType || "audio/webm" });
       onRecorded(blob);
       stream.getTracks().forEach((t) => t.stop());
     };
@@ -123,7 +130,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
           <button
             type="button"
             onClick={startRecording}
-            className="w-8 h-8 rounded-full bg-amber-700 text-white flex items-center justify-center hover:bg-amber-800"
+            className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
           >
             <Mic className="w-4 h-4" />
           </button>

@@ -11,7 +11,7 @@ export function usePeople(familyId: string | null) {
   const supabase = createClient();
 
   const fetchAll = useCallback(async () => {
-    if (!familyId) return;
+    if (!familyId) { setLoading(false); return; }
     const [{ data: p }, { data: r }] = await Promise.all([
       supabase.from("people").select("*").eq("family_id", familyId),
       supabase.from("relationships").select("*").eq("family_id", familyId),

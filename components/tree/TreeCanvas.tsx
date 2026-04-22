@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -16,7 +16,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PersonNode, type PersonNodeData } from "./PersonNode";
-import type { Person, Relationship } from "@/types";
+import { RelationshipModal } from "./RelationshipModal";
+import type { Person, Relationship, MemoryType } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { debounce } from "@/lib/utils";
 
@@ -26,16 +27,27 @@ interface TreeCanvasProps {
   people: Person[];
   relationships: Relationship[];
   onNodeClick: (personId: string) => void;
+  memoryTypes?: Record<string, MemoryType[]>;
 }
 
-function buildNodes(people: Person[], onNodeClick: (id: string) => void): Node[] {
+function buildNodes(
+  people: Person[],
+  onNodeClick: (id: string) => void,
+  memoryTypes: Record<string, MemoryType[]> = {}
+): Node[] {
   return people.map((p) => ({
     id: p.id,
     type: "person",
     position: { x: p.canvas_x, y: p.canvas_y },
-    data: { ...p, onClick: onNodeClick } as unknown as Record<string, unknown>,
+    data: { ...p, onClick: onNodeClick, memoryTypes: memoryTypes[p.id] ?? [] } as unknown as Record<string, unknown>,
   }));
 }
+
+const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
+  parent_child: { stroke: "#2563eb", strokeWidth: 2 },
+  spouse:       { stroke: "#7c3aed", strokeWidth: 1.5, strokeDasharray: "5,3" },
+  sibling:      { stroke: "#0891b2", strokeWidth: 1.5, strokeDasharray: "2,5" },
+};
 
 function buildEdges(relationships: Relationship[]): Edge[] {
   return relationships.map((r) => {
@@ -47,41 +59,38 @@ function buildEdges(relationships: Relationship[]): Edge[] {
       sourceHandle: isSpouse ? "right" : undefined,
       targetHandle: isSpouse ? "left" : undefined,
       type: "smoothstep",
-      style: {
-        stroke: isSpouse ? "#93c5fd" : "#d97706",
-        strokeWidth: isSpouse ? 1.5 : 2,
-        strokeDasharray: isSpouse ? "5,3" : undefined,
-      },
+      style: EDGE_STYLES[r.type] ?? EDGE_STYLES.parent_child,
       markerEnd:
         r.type === "parent_child"
-          ? { type: MarkerType.ArrowClosed, color: "#d97706" }
+          ? { type: MarkerType.ArrowClosed, color: "#2563eb" }
           : undefined,
       label:
-        r.type === "sibling"
-          ? "sibling"
-          : r.type === "spouse"
-          ? "♥"
-          : undefined,
+        r.type === "spouse" ? "♥" : undefined,
     };
   });
 }
 
-export function TreeCanvas({ people, relationships, onNodeClick }: TreeCanvasProps) {
+export function TreeCanvas({ people, relationships, onNodeClick, memoryTypes = {} }: TreeCanvasProps) {
   const supabase = createClient();
+  const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
 
   const initialNodes = useMemo(
-    () => buildNodes(people, onNodeClick),
-    [people, onNodeClick]
+    () => buildNodes(people, onNodeClick, memoryTypes),
+    [people, onNodeClick, memoryTypes]
   );
   const initialEdges = useMemo(() => buildEdges(relationships), [relationships]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Keep nodes in sync when people prop changes (real-time)
+  // Keep nodes and edges in sync when props change
   useMemo(() => {
-    setNodes(buildNodes(people, onNodeClick));
-  }, [people, onNodeClick, setNodes]);
+    setNodes(buildNodes(people, onNodeClick, memoryTypes));
+  }, [people, onNodeClick, memoryTypes, setNodes]);
+
+  useMemo(() => {
+    setEdges(buildEdges(relationships));
+  }, [relationships, setEdges]);
 
   const savePosition = useCallback(
     debounce(async (id: string, x: number, y: number) => {
@@ -112,13 +121,28 @@ export function TreeCanvas({ people, relationships, onNodeClick }: TreeCanvasPro
     [onEdgesChange]
   );
 
+  const handleEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: Edge) => {
+      const rel = relationships.find((r) => r.id === edge.id) ?? null;
+      setSelectedRelationship(rel);
+    },
+    [relationships]
+  );
+
   return (
     <div className="w-full h-full">
+      <RelationshipModal
+        relationship={selectedRelationship}
+        people={people}
+        onClose={() => setSelectedRelationship(null)}
+        onChanged={() => setSelectedRelationship(null)}
+      />
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
+        onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -126,12 +150,12 @@ export function TreeCanvas({ people, relationships, onNodeClick }: TreeCanvasPro
         maxZoom={2}
         deleteKeyCode={null}
       >
-        <Background color="#fde68a" gap={24} size={1} />
+        <Background color="#bfdbfe" gap={24} size={1} />
         <Controls />
         <MiniMap
           nodeColor={(n) => {
             const d = n.data as unknown as PersonNodeData;
-            return d.dod ? "#d1d5db" : "#fde68a";
+            return d.dod ? "#d1d5db" : "#bfdbfe";
           }}
           maskColor="rgba(0,0,0,0.05)"
         />

@@ -64,10 +64,13 @@ export function AddMemoryModal({
     let storageUrl: string | null = null;
 
     if (memType === "audio" && audioBlob) {
-      const path = `${familyId}/${personId}/${Date.now()}.webm`;
+      // Strip codec parameters (e.g. "audio/webm;codecs=opus" → "audio/webm")
+      const mime = (audioBlob.type || "audio/webm").split(";")[0].trim();
+      const ext = mime === "audio/mp4" ? "mp4" : mime === "audio/ogg" ? "ogg" : "webm";
+      const path = `${familyId}/${personId}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("audio")
-        .upload(path, audioBlob, { contentType: "audio/webm" });
+        .upload(path, audioBlob, { contentType: mime });
       if (uploadError) { setError(uploadError.message); setLoading(false); return; }
       const { data } = supabase.storage.from("audio").getPublicUrl(path);
       storageUrl = data.publicUrl;
@@ -118,7 +121,7 @@ export function AddMemoryModal({
               onClick={() => { setMemType(type); setAudioBlob(null); setFile(null); }}
               className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs font-medium transition-colors ${
                 memType === type
-                  ? "bg-amber-50 border-amber-500 text-amber-800"
+                  ? "bg-slate-50 border-blue-500 text-blue-700"
                   : "border-gray-200 text-gray-500 hover:border-gray-300"
               }`}
             >
@@ -134,7 +137,7 @@ export function AddMemoryModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder={
               memType === "audio" ? "e.g. Grandma's childhood story" :
               memType === "photo" ? "e.g. Summer 1965" :
@@ -162,7 +165,7 @@ export function AddMemoryModal({
               required
               accept={memType === "photo" ? "image/*" : undefined}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+              className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-50 file:text-blue-600 hover:file:bg-blue-50"
             />
           </div>
         )}
@@ -176,7 +179,7 @@ export function AddMemoryModal({
             onChange={(e) => setDescription(e.target.value)}
             required={memType === "note"}
             rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             placeholder={memType === "note" ? "Write your memory here..." : "Optional context or caption..."}
           />
         </div>
@@ -196,7 +199,7 @@ export function AddMemoryModal({
           <button
             type="submit"
             disabled={loading || !isValid}
-            className="flex-1 bg-amber-700 text-white py-2 rounded-lg text-sm hover:bg-amber-800 disabled:opacity-50"
+            className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save Memory"}
           </button>

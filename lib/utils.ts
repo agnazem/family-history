@@ -11,7 +11,9 @@ export function debounce<T extends (...args: Parameters<T>) => void>(
 
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  // Parse as local time to avoid UTC-offset day shift
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",

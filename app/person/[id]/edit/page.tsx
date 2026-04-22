@@ -88,14 +88,14 @@ export default function EditPersonPage() {
 
   if (fetching) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-amber-50">
-        <p className="text-amber-700">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <p className="text-blue-600">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-amber-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-lg mx-auto px-4 py-8">
         <button
           onClick={() => router.back()}
@@ -116,7 +116,7 @@ export default function EditPersonPage() {
                   required
                   value={form.first_name}
                   onChange={(e) => set("first_name", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -125,7 +125,7 @@ export default function EditPersonPage() {
                   required
                   value={form.last_name}
                   onChange={(e) => set("last_name", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -136,7 +136,7 @@ export default function EditPersonPage() {
                   type="date"
                   value={form.dob}
                   onChange={(e) => set("dob", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -145,7 +145,7 @@ export default function EditPersonPage() {
                   type="date"
                   value={form.dod}
                   onChange={(e) => set("dod", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function EditPersonPage() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-50 file:text-blue-600 hover:file:bg-blue-50"
               />
             </div>
             <div>
@@ -164,7 +164,7 @@ export default function EditPersonPage() {
                 value={form.bio}
                 onChange={(e) => set("bio", e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
             {error && (
@@ -181,7 +181,7 @@ export default function EditPersonPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-amber-700 text-white py-2 rounded-lg text-sm hover:bg-amber-800 disabled:opacity-50"
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
               >
                 {loading ? "Saving..." : "Save Changes"}
               </button>

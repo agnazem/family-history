@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, Settings, LogOut } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { computeLayout } from "@/lib/layout";
+import type { MemoryType } from "@/types";
 
 export default function TreePage() {
   const router = useRouter();
@@ -17,8 +19,29 @@ export default function TreePage() {
 
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddRelationship, setShowAddRelationship] = useState(false);
+  const [layouting, setLayouting] = useState(false);
+  const [memoryTypes, setMemoryTypes] = useState<Record<string, MemoryType[]>>({});
 
   const supabase = createClient();
+
+  useEffect(() => {
+    if (!family?.id) return;
+    supabase
+      .from("memories")
+      .select("person_id, type")
+      .eq("family_id", family.id)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, MemoryType[]> = {};
+        for (const { person_id, type } of data) {
+          if (!map[person_id]) map[person_id] = [];
+          if (!map[person_id].includes(type as MemoryType)) {
+            map[person_id].push(type as MemoryType);
+          }
+        }
+        setMemoryTypes(map);
+      });
+  }, [family?.id, people]);
 
   const handleNodeClick = useCallback(
     (personId: string) => {
@@ -26,6 +49,19 @@ export default function TreePage() {
     },
     [router]
   );
+
+  async function handleAutoLayout() {
+    if (people.length === 0) return;
+    setLayouting(true);
+    const positions = computeLayout(people, relationships);
+    await Promise.all(
+      Object.entries(positions).map(([id, { x, y }]) =>
+        supabase.from("people").update({ canvas_x: x, canvas_y: y }).eq("id", id)
+      )
+    );
+    await refetch();
+    setLayouting(false);
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -35,17 +71,17 @@ export default function TreePage() {
 
   if (familyLoading || peopleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-amber-50">
-        <p className="text-amber-700">Loading your family tree...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <p className="text-blue-600">Loading your family tree...</p>
       </div>
     );
   }
 
   if (!family) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-amber-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <BookOpen className="w-12 h-12 text-amber-700 mx-auto mb-4" />
+          <BookOpen className="w-12 h-12 text-blue-600 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             No family found
           </h2>
@@ -54,7 +90,7 @@ export default function TreePage() {
           </p>
           <button
             onClick={() => router.push("/family/new")}
-            className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-lg font-medium"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
           >
             Create a Family History
           </button>
@@ -64,17 +100,17 @@ export default function TreePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-amber-50">
+    <div className="h-screen flex flex-col bg-slate-50">
       {/* Toolbar */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-amber-100 shadow-sm z-10">
+      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-blue-100 shadow-sm z-10">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-amber-700" />
+          <BookOpen className="w-6 h-6 text-blue-600" />
           <span className="font-semibold text-gray-900">{family.name}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowAddPerson(true)}
-            className="flex items-center gap-1.5 bg-amber-700 hover:bg-amber-800 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
           >
             <UserPlus className="w-4 h-4" />
             Add Person
@@ -82,10 +118,18 @@ export default function TreePage() {
           <button
             onClick={() => setShowAddRelationship(true)}
             disabled={people.length < 2}
-            className="flex items-center gap-1.5 border border-amber-700 text-amber-700 hover:bg-amber-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
           >
             <GitMerge className="w-4 h-4" />
             Add Relationship
+          </button>
+          <button
+            onClick={handleAutoLayout}
+            disabled={layouting || people.length === 0}
+            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            {layouting ? "Laying out..." : "Auto Layout"}
           </button>
           {member?.role === "admin" && (
             <button
@@ -116,7 +160,7 @@ export default function TreePage() {
               </p>
               <button
                 onClick={() => setShowAddPerson(true)}
-                className="bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-lg font-medium"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
               >
                 Add First Person
               </button>
@@ -127,6 +171,7 @@ export default function TreePage() {
             people={people}
             relationships={relationships}
             onNodeClick={handleNodeClick}
+            memoryTypes={memoryTypes}
           />
         )}
       </main>

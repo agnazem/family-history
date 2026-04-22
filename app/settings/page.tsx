@@ -71,14 +71,14 @@ export default function SettingsPage() {
 
   if (!family || member?.role !== "admin") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-amber-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <p className="text-gray-500">Access denied.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-amber-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-lg mx-auto px-4 py-8">
         <button
           onClick={() => router.push("/tree")}
@@ -94,7 +94,7 @@ export default function SettingsPage() {
         {/* Invite */}
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-4">
-            <UserPlus className="w-4 h-4 text-amber-700" />
+            <UserPlus className="w-4 h-4 text-blue-600" />
             Invite Family Member
           </h2>
           <form onSubmit={handleInvite} className="flex gap-2">
@@ -104,12 +104,12 @@ export default function SettingsPage() {
               onChange={(e) => setInviteEmail(e.target.value)}
               required
               placeholder="family@example.com"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
               disabled={inviting}
-              className="bg-amber-700 hover:bg-amber-800 text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50"
             >
               {inviting ? "Sending..." : "Invite"}
             </button>
@@ -126,7 +126,7 @@ export default function SettingsPage() {
         {invitations.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
             <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-4">
-              <Mail className="w-4 h-4 text-amber-700" />
+              <Mail className="w-4 h-4 text-blue-600" />
               Pending Invitations
             </h2>
             <ul className="space-y-2">
@@ -136,7 +136,7 @@ export default function SettingsPage() {
                   className="flex items-center justify-between text-sm text-gray-600 py-1 border-b border-gray-50 last:border-0"
                 >
                   <span>{inv.email}</span>
-                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                  <span className="text-xs text-blue-500 bg-slate-50 px-2 py-0.5 rounded-full">
                     pending
                   </span>
                 </li>
@@ -148,7 +148,7 @@ export default function SettingsPage() {
         {/* Members */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-4">
-            <Users className="w-4 h-4 text-amber-700" />
+            <Users className="w-4 h-4 text-blue-600" />
             Members ({members.length})
           </h2>
           <ul className="space-y-2">
@@ -159,7 +159,7 @@ export default function SettingsPage() {
               >
                 <span className="text-gray-700">{m.user_id}</span>
                 {m.role === "admin" && (
-                  <span title="Admin"><Crown className="w-4 h-4 text-amber-500" /></span>
+                  <span title="Admin"><Crown className="w-4 h-4 text-blue-400" /></span>
                 )}
               </li>
             ))}
