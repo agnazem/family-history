@@ -1,0 +1,104 @@
+import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
+
+async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>, familyId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { user: null, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+
+  const { data: member } = await supabase
+    .from("family_members")
+    .select("role")
+    .eq("family_id", familyId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!member || member.role !== "admin") {
+    return { user: null, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  return { user, error: null };
+}
+
+// GET /api/members?familyId=X — list members with email and display name
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const familyId = searchParams.get("familyId");
+  if (!familyId) return NextResponse.json({ error: "Missing familyId" }, { status: 400 });
+
+  const supabase = await createClient();
+  const { error: authError } = await requireAdmin(supabase, familyId);
+  if (authError) return authError;
+
+  const { data: members } = await supabase
+    .from("family_members")
+    .select("*")
+    .eq("family_id", familyId)
+    .order("joined_at");
+
+  if (!members?.length) return NextResponse.json({ members: [] });
+
+  const adminSupabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const enriched = await Promise.all(
+    members.map(async (m) => {
+      const { data } = await adminSupabase.auth.admin.getUserById(m.user_id);
+      return {
+        ...m,
+        email: data.user?.email ?? "Unknown",
+        full_name: (data.user?.user_metadata?.full_name as string | undefined) ?? null,
+      };
+    })
+  );
+
+  return NextResponse.json({ members: enriched });
+}
+
+// PATCH /api/members — change a member's role
+export async function PATCH(request: Request) {
+  const { familyId, userId, role } = await request.json();
+  if (!familyId || !userId || !role) {
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { error: authError } = await requireAdmin(supabase, familyId);
+  if (authError) return authError;
+
+  const { error } = await supabase
+    .from("family_members")
+    .update({ role })
+    .eq("family_id", familyId)
+    .eq("user_id", userId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
+
+// DELETE /api/members — remove a member from the family
+export async function DELETE(request: Request) {
+  const { familyId, userId } = await request.json();
+  if (!familyId || !userId) {
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { user, error: authError } = await requireAdmin(supabase, familyId);
+  if (authError) return authError;
+
+  if (user!.id === userId) {
+    return NextResponse.json({ error: "You cannot remove yourself." }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("family_members")
+    .delete()
+    .eq("family_id", familyId)
+    .eq("user_id", userId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
