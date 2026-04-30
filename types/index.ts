@@ -61,6 +61,13 @@ export interface Memory {
   };
 }
 
+export interface MemoryPerson {
+  id: string;
+  memory_id: string;
+  person_id: string;
+  family_id: string;
+}
+
 export interface Invitation {
   id: string;
   family_id: string;

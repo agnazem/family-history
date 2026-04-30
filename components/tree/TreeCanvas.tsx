@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  Handle,
+  Position,
   useNodesState,
   useEdgesState,
   type Node,
@@ -21,7 +23,196 @@ import type { Person, Relationship, MemoryType } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { debounce } from "@/lib/utils";
 
-const nodeTypes = { person: PersonNode };
+// ── constants ────────────────────────────────────────────────────────────────
+const NODE_WIDTH = 160;
+const NODE_HEIGHT_APPROX = 110;
+const JUNCTION_SIZE = 20;
+const JUNCTION_Y_OFFSET = NODE_HEIGHT_APPROX / 2 - JUNCTION_SIZE / 2; // ~45
+
+// ── CoupleJunctionNode ───────────────────────────────────────────────────────
+function CoupleJunctionNode() {
+  return (
+    <>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className="!w-2 !h-2 !bg-purple-400 !border-purple-300"
+      />
+      <div className="w-5 h-5 bg-white border-2 border-purple-400 rounded-full flex items-center justify-center shadow-sm pointer-events-none select-none">
+        <span className="text-purple-500 text-[8px] leading-none">♥</span>
+      </div>
+    </>
+  );
+}
+
+const nodeTypes = { person: PersonNode, coupleJunction: CoupleJunctionNode };
+
+// ── edge styles ──────────────────────────────────────────────────────────────
+const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
+  parent_child: { stroke: "#2563eb", strokeWidth: 2 },
+  spouse:       { stroke: "#7c3aed", strokeWidth: 1.5, strokeDasharray: "5,3" },
+  sibling:      { stroke: "#0891b2", strokeWidth: 1.5, strokeDasharray: "2,5" },
+};
+
+// ── graph helpers ────────────────────────────────────────────────────────────
+
+type CoupleInfo = {
+  a: string;
+  b: string;
+  relId: string;
+  sharedChildren: string[];
+};
+
+function getCouples(relationships: Relationship[]): CoupleInfo[] {
+  const childrenOf: Record<string, string[]> = {};
+  const parentsOf: Record<string, string[]> = {};
+
+  for (const rel of relationships) {
+    if (rel.type === "parent_child") {
+      if (!childrenOf[rel.person_a_id]) childrenOf[rel.person_a_id] = [];
+      if (!parentsOf[rel.person_b_id]) parentsOf[rel.person_b_id] = [];
+      childrenOf[rel.person_a_id].push(rel.person_b_id);
+      parentsOf[rel.person_b_id].push(rel.person_a_id);
+    }
+  }
+
+  return relationships
+    .filter((r) => r.type === "spouse")
+    .map((r) => {
+      const shared = (childrenOf[r.person_a_id] ?? []).filter((cid) =>
+        (parentsOf[cid] ?? []).includes(r.person_b_id)
+      );
+      return shared.length > 0
+        ? { a: r.person_a_id, b: r.person_b_id, relId: r.id, sharedChildren: shared }
+        : null;
+    })
+    .filter(Boolean) as CoupleInfo[];
+}
+
+function buildPersonNodes(
+  people: Person[],
+  onNodeClick: (id: string) => void,
+  memoryTypes: Record<string, MemoryType[]>
+): Node[] {
+  return people.map((p) => ({
+    id: p.id,
+    type: "person",
+    position: { x: p.canvas_x, y: p.canvas_y },
+    data: {
+      ...p,
+      onClick: onNodeClick,
+      memoryTypes: memoryTypes[p.id] ?? [],
+    } as unknown as Record<string, unknown>,
+  }));
+}
+
+function computeJunctionNodes(couples: CoupleInfo[], personNodes: Node[]): Node[] {
+  const posMap = new Map(personNodes.map((n) => [n.id, n.position]));
+
+  return couples
+    .map(({ a, b, relId }) => {
+      const posA = posMap.get(a);
+      const posB = posMap.get(b);
+      if (!posA || !posB) return null;
+
+      const junctionX =
+        (posA.x + NODE_WIDTH / 2 + posB.x + NODE_WIDTH / 2) / 2 - JUNCTION_SIZE / 2;
+      const junctionY = posA.y + JUNCTION_Y_OFFSET;
+
+      return {
+        id: `couple-${relId}`,
+        type: "coupleJunction",
+        position: { x: junctionX, y: junctionY },
+        data: {},
+        draggable: false,
+        selectable: false,
+        focusable: false,
+      } as Node;
+    })
+    .filter(Boolean) as Node[];
+}
+
+function buildAllEdges(relationships: Relationship[], couples: CoupleInfo[]): Edge[] {
+  // Parent→child rels for shared children are replaced by junction→child edges
+  const handledRelIds = new Set<string>();
+  for (const { a, b, sharedChildren } of couples) {
+    for (const rel of relationships) {
+      if (
+        rel.type === "parent_child" &&
+        sharedChildren.includes(rel.person_b_id) &&
+        (rel.person_a_id === a || rel.person_a_id === b)
+      ) {
+        handledRelIds.add(rel.id);
+      }
+    }
+  }
+
+  const edges: Edge[] = [];
+
+  for (const rel of relationships) {
+    if (rel.type === "spouse") {
+      edges.push({
+        id: rel.id,
+        source: rel.person_a_id,
+        target: rel.person_b_id,
+        sourceHandle: "right",
+        targetHandle: "left",
+        type: "smoothstep",
+        style: EDGE_STYLES.spouse,
+        label: "♥",
+      });
+    } else if (rel.type === "sibling") {
+      edges.push({
+        id: rel.id,
+        source: rel.person_a_id,
+        target: rel.person_b_id,
+        type: "smoothstep",
+        style: EDGE_STYLES.sibling,
+      });
+    } else if (rel.type === "parent_child" && !handledRelIds.has(rel.id)) {
+      edges.push({
+        id: rel.id,
+        source: rel.person_a_id,
+        target: rel.person_b_id,
+        type: "smoothstep",
+        style: EDGE_STYLES.parent_child,
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#2563eb" },
+      });
+    }
+  }
+
+  // One edge per shared child, all originating from the couple junction
+  for (const { relId, sharedChildren } of couples) {
+    const junctionId = `couple-${relId}`;
+    for (const childId of sharedChildren) {
+      edges.push({
+        id: `${junctionId}-${childId}`,
+        source: junctionId,
+        sourceHandle: "bottom",
+        target: childId,
+        type: "smoothstep",
+        style: EDGE_STYLES.parent_child,
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#2563eb" },
+      });
+    }
+  }
+
+  return edges;
+}
+
+function buildAllNodes(
+  people: Person[],
+  couples: CoupleInfo[],
+  onNodeClick: (id: string) => void,
+  memoryTypes: Record<string, MemoryType[]>
+): Node[] {
+  const personNodes = buildPersonNodes(people, onNodeClick, memoryTypes);
+  const junctionNodes = computeJunctionNodes(couples, personNodes);
+  return [...personNodes, ...junctionNodes];
+}
+
+// ── TreeCanvas ───────────────────────────────────────────────────────────────
 
 interface TreeCanvasProps {
   people: Person[];
@@ -30,67 +221,38 @@ interface TreeCanvasProps {
   memoryTypes?: Record<string, MemoryType[]>;
 }
 
-function buildNodes(
-  people: Person[],
-  onNodeClick: (id: string) => void,
-  memoryTypes: Record<string, MemoryType[]> = {}
-): Node[] {
-  return people.map((p) => ({
-    id: p.id,
-    type: "person",
-    position: { x: p.canvas_x, y: p.canvas_y },
-    data: { ...p, onClick: onNodeClick, memoryTypes: memoryTypes[p.id] ?? [] } as unknown as Record<string, unknown>,
-  }));
-}
-
-const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
-  parent_child: { stroke: "#2563eb", strokeWidth: 2 },
-  spouse:       { stroke: "#7c3aed", strokeWidth: 1.5, strokeDasharray: "5,3" },
-  sibling:      { stroke: "#0891b2", strokeWidth: 1.5, strokeDasharray: "2,5" },
-};
-
-function buildEdges(relationships: Relationship[]): Edge[] {
-  return relationships.map((r) => {
-    const isSpouse = r.type === "spouse";
-    return {
-      id: r.id,
-      source: r.person_a_id,
-      target: r.person_b_id,
-      sourceHandle: isSpouse ? "right" : undefined,
-      targetHandle: isSpouse ? "left" : undefined,
-      type: "smoothstep",
-      style: EDGE_STYLES[r.type] ?? EDGE_STYLES.parent_child,
-      markerEnd:
-        r.type === "parent_child"
-          ? { type: MarkerType.ArrowClosed, color: "#2563eb" }
-          : undefined,
-      label:
-        r.type === "spouse" ? "♥" : undefined,
-    };
-  });
-}
-
-export function TreeCanvas({ people, relationships, onNodeClick, memoryTypes = {} }: TreeCanvasProps) {
+export function TreeCanvas({
+  people,
+  relationships,
+  onNodeClick,
+  memoryTypes = {},
+}: TreeCanvasProps) {
   const supabase = createClient();
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
 
-  const initialNodes = useMemo(
-    () => buildNodes(people, onNodeClick, memoryTypes),
-    [people, onNodeClick, memoryTypes]
+  const couples = useMemo(() => getCouples(relationships), [relationships]);
+
+  // All nodes (person + junction) in a single state so React Flow can measure
+  // all of them and route edges correctly.
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    buildAllNodes(people, couples, onNodeClick, memoryTypes)
   );
-  const initialEdges = useMemo(() => buildEdges(relationships), [relationships]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    buildAllEdges(relationships, couples)
+  );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // Keep a ref so handleNodesChange can read current positions without a stale closure
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
 
-  // Keep nodes and edges in sync when props change
+  // Sync all nodes when people/relationships change (e.g. after add/edit/auto-layout)
   useMemo(() => {
-    setNodes(buildNodes(people, onNodeClick, memoryTypes));
-  }, [people, onNodeClick, memoryTypes, setNodes]);
+    setNodes(buildAllNodes(people, couples, onNodeClick, memoryTypes));
+  }, [people, onNodeClick, memoryTypes, couples, setNodes]);
 
   useMemo(() => {
-    setEdges(buildEdges(relationships));
-  }, [relationships, setEdges]);
+    setEdges(buildAllEdges(relationships, couples));
+  }, [relationships, couples, setEdges]);
 
   const savePosition = useCallback(
     debounce(async (id: string, x: number, y: number) => {
@@ -104,25 +266,65 @@ export function TreeCanvas({ people, relationships, onNodeClick, memoryTypes = {
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      onNodesChange(changes);
+      // Check for person-node position changes so we can update junction positions
+      // in the same batch (junctions must follow their parents during drag)
+      const personPositionChanges = changes.filter(
+        (c) => c.type === "position" && "id" in c && !String(c.id).startsWith("couple-")
+      );
+
+      if (personPositionChanges.length > 0) {
+        // Build a temporary updated position map
+        const currentNodes = nodesRef.current;
+        const posMap = new Map(currentNodes.map((n) => [n.id, n.position]));
+        for (const c of personPositionChanges) {
+          if (c.type === "position" && c.position) posMap.set(c.id, c.position);
+        }
+
+        // Recompute junction positions from updated person positions
+        const personNodes = currentNodes.filter((n) => !n.id.startsWith("couple-"));
+        const updatedPersonNodes = personNodes.map((n) => ({
+          ...n,
+          position: posMap.get(n.id) ?? n.position,
+        }));
+        const newJunctions = computeJunctionNodes(couples, updatedPersonNodes);
+
+        // Inject junction position changes into the same batch
+        const junctionChanges: NodeChange[] = newJunctions.map((j) => ({
+          type: "position" as const,
+          id: j.id,
+          position: j.position,
+          dragging: false,
+        }));
+
+        onNodesChange([...changes, ...junctionChanges]);
+      } else {
+        onNodesChange(changes);
+      }
+
+      // Persist person node positions to DB after drag ends
       for (const change of changes) {
-        if (change.type === "position" && change.position && !change.dragging) {
+        if (
+          change.type === "position" &&
+          "id" in change &&
+          !String(change.id).startsWith("couple-") &&
+          change.position &&
+          !change.dragging
+        ) {
           savePosition(change.id, change.position.x, change.position.y);
         }
       }
     },
-    [onNodesChange, savePosition]
+    [onNodesChange, couples, savePosition]
   );
 
   const handleEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      onEdgesChange(changes);
-    },
+    (changes: EdgeChange[]) => { onEdgesChange(changes); },
     [onEdgesChange]
   );
 
   const handleEdgeClick = useCallback(
     (_: React.MouseEvent, edge: Edge) => {
+      if (edge.id.startsWith("couple-")) return;
       const rel = relationships.find((r) => r.id === edge.id) ?? null;
       setSelectedRelationship(rel);
     },

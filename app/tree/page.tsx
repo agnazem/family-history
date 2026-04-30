@@ -7,7 +7,8 @@ import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search } from "lucide-react";
+import { SearchModal } from "@/components/search/SearchModal";
 import { createClient } from "@/lib/supabase/client";
 import { computeLayout } from "@/lib/layout";
 import type { MemoryType } from "@/types";
@@ -19,6 +20,7 @@ export default function TreePage() {
 
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddRelationship, setShowAddRelationship] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [layouting, setLayouting] = useState(false);
   const [memoryTypes, setMemoryTypes] = useState<Record<string, MemoryType[]>>({});
 
@@ -27,21 +29,34 @@ export default function TreePage() {
   useEffect(() => {
     if (!family?.id) return;
     supabase
-      .from("memories")
-      .select("person_id, type")
+      .from("memory_people")
+      .select("person_id, memories!inner(type)")
       .eq("family_id", family.id)
       .then(({ data }) => {
         if (!data) return;
         const map: Record<string, MemoryType[]> = {};
-        for (const { person_id, type } of data) {
-          if (!map[person_id]) map[person_id] = [];
-          if (!map[person_id].includes(type as MemoryType)) {
-            map[person_id].push(type as MemoryType);
-          }
+        for (const row of data as unknown as { person_id: string; memories: { type: string } | { type: string }[] }[]) {
+          const pid = row.person_id;
+          const mem = Array.isArray(row.memories) ? row.memories[0] : row.memories;
+          if (!mem) continue;
+          const t = mem.type as MemoryType;
+          if (!map[pid]) map[pid] = [];
+          if (!map[pid].includes(t)) map[pid].push(t);
         }
         setMemoryTypes(map);
       });
   }, [family?.id, people]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleNodeClick = useCallback(
     (personId: string) => {
@@ -108,6 +123,14 @@ export default function TreePage() {
           <span className="font-semibold text-gray-900">{family.name}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            title="Search (⌘K)"
+          >
+            <Search className="w-4 h-4" />
+            Search
+          </button>
           <button
             onClick={() => setShowAddPerson(true)}
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
@@ -188,6 +211,13 @@ export default function TreePage() {
         familyId={family.id}
         people={people}
         onAdded={refetch}
+      />
+      <SearchModal
+        open={showSearch}
+        onClose={() => setShowSearch(false)}
+        familyId={family.id}
+        people={people}
+        onPersonClick={(personId) => router.push(`/person/${personId}`)}
       />
     </div>
   );

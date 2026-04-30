@@ -4,14 +4,15 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { AudioRecorder } from "./AudioRecorder";
 import { createClient } from "@/lib/supabase/client";
-import { Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
-import type { MemoryType } from "@/types";
+import { Mic, Image as ImageIcon, FileText, PenLine, Check } from "lucide-react";
+import type { MemoryType, Person } from "@/types";
 
 interface AddMemoryModalProps {
   open: boolean;
   onClose: () => void;
   personId: string;
   familyId: string;
+  familyPeople: Person[];
   onAdded: () => void;
 }
 
@@ -27,6 +28,7 @@ export function AddMemoryModal({
   onClose,
   personId,
   familyId,
+  familyPeople,
   onAdded,
 }: AddMemoryModalProps) {
   const [memType, setMemType] = useState<MemoryType>("audio");
@@ -34,16 +36,29 @@ export function AddMemoryModal({
   const [description, setDescription] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [taggedIds, setTaggedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  const otherPeople = familyPeople.filter((p) => p.id !== personId);
+
+  function toggleTag(pid: string) {
+    setTaggedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(pid)) next.delete(pid);
+      else next.add(pid);
+      return next;
+    });
+  }
 
   function reset() {
     setTitle("");
     setDescription("");
     setAudioBlob(null);
     setFile(null);
+    setTaggedIds(new Set());
     setError(null);
     setMemType("audio");
   }
@@ -53,7 +68,7 @@ export function AddMemoryModal({
     onClose();
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -64,7 +79,6 @@ export function AddMemoryModal({
     let storageUrl: string | null = null;
 
     if (memType === "audio" && audioBlob) {
-      // Strip codec parameters (e.g. "audio/webm;codecs=opus" → "audio/webm")
       const mime = (audioBlob.type || "audio/webm").split(";")[0].trim();
       const ext = mime === "audio/mp4" ? "mp4" : mime === "audio/ogg" ? "ogg" : "webm";
       const path = `${familyId}/${personId}/${Date.now()}.${ext}`;
@@ -85,22 +99,38 @@ export function AddMemoryModal({
       storageUrl = data.publicUrl;
     }
 
-    const { error: insertError } = await supabase.from("memories").insert({
-      person_id: personId,
-      family_id: familyId,
-      type: memType,
-      title: title || (memType === "audio" ? "Voice Recording" : "Memory"),
-      description: description || null,
-      storage_url: storageUrl,
-      recorded_by: user.id,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("memories")
+      .insert({
+        person_id: personId,
+        family_id: familyId,
+        type: memType,
+        title: title || (memType === "audio" ? "Voice Recording" : "Memory"),
+        description: description || null,
+        storage_url: storageUrl,
+        recorded_by: user.id,
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
-      setError(insertError.message);
-    } else {
-      onAdded();
-      handleClose();
+    if (insertError || !inserted) {
+      setError(insertError?.message ?? "Failed to save memory.");
+      setLoading(false);
+      return;
     }
+
+    // Tag primary person + any selected additional people
+    const allTagged = [personId, ...Array.from(taggedIds)];
+    await supabase.from("memory_people").insert(
+      allTagged.map((pid) => ({
+        memory_id: inserted.id,
+        person_id: pid,
+        family_id: familyId,
+      }))
+    );
+
+    onAdded();
+    handleClose();
     setLoading(false);
   }
 
@@ -183,6 +213,35 @@ export function AddMemoryModal({
             placeholder={memType === "note" ? "Write your memory here..." : "Optional context or caption..."}
           />
         </div>
+
+        {/* Multi-person tagging */}
+        {otherPeople.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-2">
+              Also tag family members
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {otherPeople.map((p) => {
+                const selected = taggedIds.has(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggleTag(p.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                      selected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "border-gray-300 text-gray-600 hover:border-blue-400"
+                    }`}
+                  >
+                    {selected && <Check className="w-3 h-3" />}
+                    {p.first_name} {p.last_name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {error && (
           <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>

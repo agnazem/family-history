@@ -10,7 +10,8 @@ import { MemoryModal } from "@/components/folio/MemoryModal";
 import { AddMemoryModal } from "@/components/folio/AddMemoryModal";
 import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { ArrowLeft, Pencil, Plus, GitMerge } from "lucide-react";
+import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
+import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Person, Relationship } from "@/types";
 
@@ -30,6 +31,7 @@ export default function PersonPage() {
   const [loading, setLoading] = useState(true);
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [showAddRelationship, setShowAddRelationship] = useState(false);
+  const [pendingIntent, setPendingIntent] = useState<RelationIntent | null>(null);
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<import("@/types").Memory | null>(null);
   const supabase = createClient();
@@ -137,15 +139,30 @@ export default function PersonPage() {
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
         {/* Relationships */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Relationships</h2>
-            <button
-              onClick={() => setShowAddRelationship(true)}
-              className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <GitMerge className="w-4 h-4" />
-              Add
-            </button>
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Relationships</h2>
+            <div className="flex flex-wrap gap-2">
+              {(["add_parent", "add_child", "add_sibling", "add_spouse"] as RelationIntent[]).map((intent) => (
+                <button
+                  key={intent}
+                  onClick={() => setPendingIntent(intent)}
+                  className="flex items-center gap-1.5 border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  {intent === "add_parent" ? "Add Parent" :
+                   intent === "add_child" ? "Add Child" :
+                   intent === "add_sibling" ? "Add Sibling" : "Add Spouse"}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowAddRelationship(true)}
+                className="flex items-center gap-1.5 border border-gray-300 text-gray-500 hover:bg-gray-50 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                title="Link to an existing family member"
+              >
+                <GitMerge className="w-3.5 h-3.5" />
+                Link Existing
+              </button>
+            </div>
           </div>
 
           {!hasRelationships ? (
@@ -216,11 +233,13 @@ export default function PersonPage() {
         onClose={() => setShowAddMemory(false)}
         personId={id}
         familyId={person.family_id}
+        familyPeople={familyPeople}
         onAdded={refetchMemories}
       />
 
       <MemoryModal
         memory={selectedMemory}
+        familyPeople={familyPeople}
         onClose={() => setSelectedMemory(null)}
         onChanged={() => { setSelectedMemory(null); refetchMemories(); }}
       />
@@ -244,6 +263,21 @@ export default function PersonPage() {
           loadRelationships(person.family_id);
         }}
       />
+
+      {pendingIntent && (
+        <AddRelatedPersonModal
+          open={!!pendingIntent}
+          onClose={() => setPendingIntent(null)}
+          intent={pendingIntent}
+          currentPersonId={id}
+          currentPersonName={fullName}
+          familyId={person.family_id}
+          onAdded={() => {
+            setPendingIntent(null);
+            loadRelationships(person.family_id);
+          }}
+        />
+      )}
     </div>
   );
 }
