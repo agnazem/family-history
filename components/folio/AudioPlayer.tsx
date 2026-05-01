@@ -61,7 +61,7 @@ export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
       <button
         type="button"
         onClick={() => skip(-15)}
-        className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg hover:bg-black/10 transition-colors text-xs font-medium"
+        className="flex items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-xs font-medium"
         title="Back 15 seconds"
       >
         <SkipBack className="w-3.5 h-3.5" />
@@ -70,7 +70,7 @@ export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
       <button
         type="button"
         onClick={togglePlay}
-        className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-black/10 transition-colors"
+        className="flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/10 transition-colors"
         title={playing ? "Pause" : "Play"}
       >
         {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -78,7 +78,7 @@ export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
       <button
         type="button"
         onClick={() => skip(15)}
-        className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg hover:bg-black/10 transition-colors text-xs font-medium"
+        className="flex items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-xs font-medium"
         title="Forward 15 seconds"
       >
         15s
