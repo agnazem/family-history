@@ -57,6 +57,51 @@ export async function GET(request: Request) {
   return NextResponse.json({ members: enriched });
 }
 
+// POST /api/members — add an existing user (by email) directly to the family
+export async function POST(request: Request) {
+  const { familyId, email } = await request.json();
+  if (!familyId || !email) {
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { error: authError } = await requireAdmin(supabase, familyId);
+  if (authError) return authError;
+
+  const adminSupabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: { users } } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
+  const targetUser = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+
+  if (!targetUser) {
+    return NextResponse.json(
+      { error: "No account found with that email. Use 'Invite' if they haven't signed up yet." },
+      { status: 404 }
+    );
+  }
+
+  const { data: existing } = await supabase
+    .from("family_members")
+    .select("id")
+    .eq("family_id", familyId)
+    .eq("user_id", targetUser.id)
+    .single();
+
+  if (existing) {
+    return NextResponse.json({ error: "That person is already a member of this family." }, { status: 409 });
+  }
+
+  const { error } = await supabase
+    .from("family_members")
+    .insert({ family_id: familyId, user_id: targetUser.id, role: "member" });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
+
 // PATCH /api/members — change a member's role
 export async function PATCH(request: Request) {
   const { familyId, userId, role } = await request.json();
