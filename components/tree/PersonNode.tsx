@@ -47,27 +47,25 @@ export function PersonNode({ data }: NodeProps) {
       >
         <div className="flex flex-col items-center gap-2">
           <Avatar src={person.profile_photo_url} name={fullName} size="lg" />
-          <div className="text-center">
-            <p className={`text-sm font-semibold leading-tight ${isDeceased ? "text-gray-500" : "text-gray-900"}`}>
+          <div className="text-center w-full">
+            <p className={`text-sm font-semibold leading-tight line-clamp-2 h-9 overflow-hidden ${isDeceased ? "text-gray-500" : "text-gray-900"}`}>
               {fullName}
             </p>
-            {dates && (
-              <p className="text-xs text-gray-400 mt-0.5">{dates}</p>
+            <p className="text-xs text-gray-400 mt-0.5 h-4 truncate">
+              {dates ?? ""}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 pt-0.5 border-t border-gray-100 w-full justify-center h-5">
+            {memoryTypes.map((type) => {
+              const { Icon, className } = MEMORY_ICONS[type];
+              return <Icon key={type} className={`w-3 h-3 ${className}`} />;
+            })}
+            {memoryCount > 0 && (
+              <span className="ml-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 leading-none">
+                {memoryCount}
+              </span>
             )}
           </div>
-          {memoryTypes.length > 0 && (
-            <div className="flex items-center gap-1.5 pt-0.5 border-t border-gray-100 w-full justify-center">
-              {memoryTypes.map((type) => {
-                const { Icon, className } = MEMORY_ICONS[type];
-                return <Icon key={type} className={`w-3 h-3 ${className}`} />;
-              })}
-              {memoryCount > 0 && (
-                <span className="ml-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 leading-none">
-                  {memoryCount}
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </div>
       <Handle
