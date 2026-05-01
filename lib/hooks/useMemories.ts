@@ -68,7 +68,9 @@ export function useMemories(personId: string | null, familyId: string | null) {
         { event: "*", schema: "public", table: "memory_people", filter: `family_id=eq.${familyId}` },
         fetchMemories
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) console.warn("useMemories realtime error:", err);
+      });
 
     return () => {
       supabase.removeChannel(channel);

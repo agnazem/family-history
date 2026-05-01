@@ -12,26 +12,31 @@ export function useFamily() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: memberRow } = await supabase
+          .from("family_members")
+          .select("*, families(*)")
+          .eq("user_id", user.id)
+          .limit(1)
+          .single();
+
+        if (memberRow) {
+          setMember(memberRow as FamilyMember);
+          setFamily((memberRow as { families: Family }).families);
+        }
+      } catch (err) {
+        console.warn("useFamily load error:", err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { data: memberRow } = await supabase
-        .from("family_members")
-        .select("*, families(*)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (memberRow) {
-        setMember(memberRow as FamilyMember);
-        setFamily((memberRow as { families: Family }).families);
-      }
-      setLoading(false);
     }
     load();
   }, []);

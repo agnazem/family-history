@@ -52,7 +52,6 @@ const nodeTypes = { person: PersonNode, coupleJunction: CoupleJunctionNode };
 const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
   parent_child: { stroke: "#2563eb", strokeWidth: 2 },
   spouse:       { stroke: "#7c3aed", strokeWidth: 1.5, strokeDasharray: "5,3" },
-  sibling:      { stroke: "#0891b2", strokeWidth: 1.5, strokeDasharray: "2,5" },
 };
 
 // ── graph helpers ────────────────────────────────────────────────────────────
@@ -135,7 +134,11 @@ function computeJunctionNodes(couples: CoupleInfo[], personNodes: Node[]): Node[
     .filter(Boolean) as Node[];
 }
 
-function buildAllEdges(relationships: Relationship[], couples: CoupleInfo[]): Edge[] {
+function buildAllEdges(
+  relationships: Relationship[],
+  couples: CoupleInfo[],
+  positions: Map<string, { x: number; y: number }>
+): Edge[] {
   // Parent→child rels for shared children are replaced by junction→child edges
   const handledRelIds = new Set<string>();
   for (const { a, b, sharedChildren } of couples) {
@@ -154,23 +157,19 @@ function buildAllEdges(relationships: Relationship[], couples: CoupleInfo[]): Ed
 
   for (const rel of relationships) {
     if (rel.type === "spouse") {
+      const posA = positions.get(rel.person_a_id);
+      const posB = positions.get(rel.person_b_id);
+      // Connect inner edges: right side of the left person → left side of the right person
+      const aIsLeft = !posA || !posB || posA.x <= posB.x;
       edges.push({
         id: rel.id,
         source: rel.person_a_id,
         target: rel.person_b_id,
-        sourceHandle: "right",
-        targetHandle: "left",
+        sourceHandle: aIsLeft ? "right" : "left-out",
+        targetHandle: aIsLeft ? "left" : "right-in",
         type: "smoothstep",
         style: EDGE_STYLES.spouse,
         label: "♥",
-      });
-    } else if (rel.type === "sibling") {
-      edges.push({
-        id: rel.id,
-        source: rel.person_a_id,
-        target: rel.person_b_id,
-        type: "smoothstep",
-        style: EDGE_STYLES.sibling,
       });
     } else if (rel.type === "parent_child" && !handledRelIds.has(rel.id)) {
       edges.push({
@@ -223,6 +222,7 @@ interface TreeCanvasProps {
   onNodeClick: (personId: string) => void;
   memoryTypes?: Record<string, MemoryType[]>;
   memoryCounts?: Record<string, number>;
+  selectMode?: boolean;
 }
 
 export function TreeCanvas({
@@ -231,6 +231,7 @@ export function TreeCanvas({
   onNodeClick,
   memoryTypes = {},
   memoryCounts = {},
+  selectMode = false,
 }: TreeCanvasProps) {
   const supabase = createClient();
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
@@ -243,7 +244,7 @@ export function TreeCanvas({
     buildAllNodes(people, couples, onNodeClick, memoryTypes, memoryCounts)
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
-    buildAllEdges(relationships, couples)
+    buildAllEdges(relationships, couples, new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }])))
   );
 
   // Keep a ref so handleNodesChange can read current positions without a stale closure
@@ -256,8 +257,9 @@ export function TreeCanvas({
   }, [people, onNodeClick, memoryTypes, couples, setNodes]);
 
   useMemo(() => {
-    setEdges(buildAllEdges(relationships, couples));
-  }, [relationships, couples, setEdges]);
+    const positions = new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }]));
+    setEdges(buildAllEdges(relationships, couples, positions));
+  }, [relationships, couples, people, setEdges]);
 
   const savePosition = useCallback(
     debounce(async (id: string, x: number, y: number) => {
@@ -356,6 +358,9 @@ export function TreeCanvas({
         minZoom={0.1}
         maxZoom={2}
         deleteKeyCode={null}
+        selectionOnDrag={selectMode}
+        panOnDrag={selectMode ? [1, 2] : true}
+        multiSelectionKeyCode="Shift"
       >
         <Background color="#bfdbfe" gap={24} size={1} />
         <Controls />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
+import type { Person } from "@/types";
 
 export type RelationIntent = "add_parent" | "add_child" | "add_sibling" | "add_spouse";
 
@@ -27,6 +28,8 @@ interface Props {
   currentPersonId: string;
   currentPersonName: string;
   familyId: string;
+  familyPeople?: Person[];
+  defaultOtherParentId?: string;
   onAdded: () => void;
 }
 
@@ -37,9 +40,12 @@ export function AddRelatedPersonModal({
   currentPersonId,
   currentPersonName,
   familyId,
+  familyPeople = [],
+  defaultOtherParentId = "",
   onAdded,
 }: Props) {
   const [form, setForm] = useState({ first_name: "", last_name: "", dob: "", dod: "", bio: "" });
+  const [otherParentId, setOtherParentId] = useState(defaultOtherParentId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -50,6 +56,7 @@ export function AddRelatedPersonModal({
 
   function handleClose() {
     setForm({ first_name: "", last_name: "", dob: "", dod: "", bio: "" });
+    setOtherParentId(defaultOtherParentId);
     setError(null);
     onClose();
   }
@@ -87,34 +94,38 @@ export function AddRelatedPersonModal({
 
     const newId = newPerson.id;
 
-    // 2. Create the relationship — direction depends on intent
+    // 2. Primary relationship
     const relPayload = (() => {
       const base = { family_id: familyId };
-      if (intent === "add_parent") {
-        return { ...base, person_a_id: newId, person_b_id: currentPersonId, type: "parent_child" };
-      }
-      if (intent === "add_child") {
-        return { ...base, person_a_id: currentPersonId, person_b_id: newId, type: "parent_child" };
-      }
-      if (intent === "add_sibling") {
-        return { ...base, person_a_id: currentPersonId, person_b_id: newId, type: "sibling" };
-      }
-      // add_spouse
+      if (intent === "add_parent") return { ...base, person_a_id: newId, person_b_id: currentPersonId, type: "parent_child" };
+      if (intent === "add_child")  return { ...base, person_a_id: currentPersonId, person_b_id: newId, type: "parent_child" };
+      if (intent === "add_sibling") return { ...base, person_a_id: currentPersonId, person_b_id: newId, type: "sibling" };
       return { ...base, person_a_id: currentPersonId, person_b_id: newId, type: "spouse" };
     })();
 
     const { error: relError } = await supabase.from("relationships").insert(relPayload);
-
     if (relError) {
       setError(relError.message);
       setLoading(false);
       return;
     }
 
+    // 3. Optional second parent relationship (add_child only)
+    if (intent === "add_child" && otherParentId) {
+      await supabase.from("relationships").insert({
+        family_id: familyId,
+        person_a_id: otherParentId,
+        person_b_id: newId,
+        type: "parent_child",
+      });
+    }
+
     onAdded();
     handleClose();
     setLoading(false);
   }
+
+  const otherPeople = familyPeople.filter((p) => p.id !== currentPersonId);
 
   return (
     <Modal open={open} onClose={handleClose} title={TITLE[intent]}>
@@ -140,6 +151,25 @@ export function AddRelatedPersonModal({
             />
           </div>
         </div>
+
+        {intent === "add_child" && otherPeople.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Other parent (optional)</label>
+            <select
+              value={otherParentId}
+              onChange={(e) => setOtherParentId(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">— none —</option>
+              {otherPeople.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>

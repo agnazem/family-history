@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { BookOpen, Users, Mic, Image } from "lucide-react";
 
 export default function LandingPage() {
@@ -15,7 +14,6 @@ export default function LandingPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const supabase = createClient();
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,8 +40,7 @@ export default function LandingPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push("/tree");
-        router.refresh();
+        window.location.href = "/tree";
       }
     }
     setLoading(false);

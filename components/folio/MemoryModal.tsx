@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Trash2, Play, Pause, Download, Pencil, Check, X, Users, MessageCircle, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trash2, Download, Pencil, Check, X, Users, MessageCircle, Send } from "lucide-react";
+import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
@@ -49,7 +50,6 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
   const [description, setDescription] = useState("");
   const [dateOfMemory, setDateOfMemory] = useState("");
   const [saving, setSaving] = useState(false);
-  const [playing, setPlaying] = useState(false);
 
   const [taggedIds, setTaggedIds] = useState<Set<string>>(new Set());
   const [originalTaggedIds, setOriginalTaggedIds] = useState<Set<string>>(new Set());
@@ -59,7 +59,6 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
   const [submittingComment, setSubmittingComment] = useState(false);
   const [memberNames, setMemberNames] = useState<Record<string, string>>({});
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -68,12 +67,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
     setDescription(memory.description ?? "");
     setDateOfMemory(memory.date_of_memory ?? "");
     setEditing(false);
-    setPlaying(false);
     setCommentText("");
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
 
     supabase
       .from("memory_people")
@@ -114,21 +108,6 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
       else next.add(personId);
       return next;
     });
-  }
-
-  function toggleAudio() {
-    if (!memory?.storage_url) return;
-    if (!audioRef.current) {
-      audioRef.current = new Audio(memory.storage_url);
-      audioRef.current.onended = () => setPlaying(false);
-    }
-    if (playing) {
-      audioRef.current.pause();
-      setPlaying(false);
-    } else {
-      audioRef.current.play().catch(() => setPlaying(false));
-      setPlaying(true);
-    }
   }
 
   async function handleSave() {
@@ -230,13 +209,9 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
 
         {/* Media */}
         {memory.type === "audio" && memory.storage_url && (
-          <button
-            onClick={toggleAudio}
-            className="flex items-center gap-2 w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-          >
-            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            {playing ? "Pause recording" : "Play recording"}
-          </button>
+          <div className="w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 text-blue-700">
+            <AudioPlayer src={memory.storage_url} />
+          </div>
         )}
 
         {memory.type === "photo" && memory.storage_url && (

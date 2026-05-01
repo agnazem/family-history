@@ -75,18 +75,10 @@ export function PersonNode({ data }: NodeProps) {
         position={Position.Bottom}
         className="!bg-blue-400"
       />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        className="!bg-blue-300"
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="left"
-        className="!bg-blue-300"
-      />
+      <Handle type="source" position={Position.Right} id="right" className="!bg-blue-300" />
+      <Handle type="target" position={Position.Right} id="right-in" className="!bg-blue-300" />
+      <Handle type="source" position={Position.Left} id="left-out" className="!bg-blue-300" />
+      <Handle type="target" position={Position.Left} id="left" className="!bg-blue-300" />
     </>
   );
 }

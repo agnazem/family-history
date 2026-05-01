@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Mic, Image as ImageIcon, FileText, PenLine, Play, Pause, Download, Users } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, PenLine, Download, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import type { Memory, Person } from "@/types";
 import Image from "next/image";
 
@@ -27,30 +27,7 @@ interface MemoryCardProps {
 }
 
 export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
-  const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const Icon = TYPE_ICONS[memory.type];
-
-  function toggleAudio() {
-    if (!memory.storage_url) return;
-    if (!audioRef.current) {
-      const audio = document.createElement("audio");
-      const source = document.createElement("source");
-      source.src = memory.storage_url;
-      const ext = memory.storage_url.split("?")[0].split(".").pop()?.toLowerCase();
-      source.type = ext === "mp4" ? "audio/mp4" : ext === "ogg" ? "audio/ogg" : "audio/webm";
-      audio.appendChild(source);
-      audio.onended = () => setPlaying(false);
-      audioRef.current = audio;
-    }
-    if (playing) {
-      audioRef.current.pause();
-      setPlaying(false);
-    } else {
-      audioRef.current.play().catch(() => setPlaying(false));
-      setPlaying(true);
-    }
-  }
 
   return (
     <div
@@ -68,13 +45,7 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
           </p>
 
           {memory.type === "audio" && memory.storage_url && (
-            <button
-              onClick={toggleAudio}
-              className="flex items-center gap-2 mt-2 text-xs font-medium opacity-80 hover:opacity-100"
-            >
-              {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              {playing ? "Pause" : "Play recording"}
-            </button>
+            <AudioPlayer src={memory.storage_url} className="mt-2" />
           )}
 
           {memory.type === "photo" && memory.storage_url && (

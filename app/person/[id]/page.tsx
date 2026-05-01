@@ -321,6 +321,12 @@ export default function PersonPage() {
           currentPersonId={id}
           currentPersonName={fullName}
           familyId={person.family_id}
+          familyPeople={familyPeople}
+          defaultOtherParentId={
+            pendingIntent === "add_child" && grouped.spouses.length === 1
+              ? getOtherPersonId(grouped.spouses[0])
+              : ""
+          }
           onAdded={() => {
             setPendingIntent(null);
             loadRelationships(person.family_id);

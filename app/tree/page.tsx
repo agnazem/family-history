@@ -7,7 +7,7 @@ import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity, MousePointer2 } from "lucide-react";
 import { SearchModal } from "@/components/search/SearchModal";
 import { createClient } from "@/lib/supabase/client";
 import { computeLayout } from "@/lib/layout";
@@ -26,6 +26,7 @@ export default function TreePage() {
   const [memoryTypes, setMemoryTypes] = useState<Record<string, MemoryType[]>>({});
   const [memoryCounts, setMemoryCounts] = useState<Record<string, number>>({});
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => searchParams.get("welcome") === "1");
+  const [selectMode, setSelectMode] = useState(false);
 
   const supabase = createClient();
 
@@ -138,6 +139,18 @@ export default function TreePage() {
             Timeline
           </button>
           <button
+            onClick={() => setSelectMode((s) => !s)}
+            className={`flex items-center gap-1.5 border text-sm px-3 py-1.5 rounded-lg transition-colors ${
+              selectMode
+                ? "bg-blue-100 border-blue-400 text-blue-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
+            }`}
+            title={selectMode ? "Switch to pan mode" : "Switch to select mode (drag to select, Shift+click to add)"}
+          >
+            <MousePointer2 className="w-4 h-4" />
+            {selectMode ? "Selecting" : "Select"}
+          </button>
+          <button
             onClick={() => router.push("/activity")}
             className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
             title="Activity"
@@ -237,6 +250,7 @@ export default function TreePage() {
             onNodeClick={handleNodeClick}
             memoryTypes={memoryTypes}
             memoryCounts={memoryCounts}
+            selectMode={selectMode}
           />
         )}
       </main>

@@ -11,9 +11,16 @@ export function debounce<T extends (...args: Parameters<T>) => void>(
 
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
-  // Parse as local time to avoid UTC-offset day shift
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+  // ISO timestamps contain "T"; parse natively (UTC).
+  // Plain "YYYY-MM-DD" dates are parsed as local time to avoid UTC day-shift.
+  const date = dateStr.includes("T")
+    ? new Date(dateStr)
+    : (() => {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      })();
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",

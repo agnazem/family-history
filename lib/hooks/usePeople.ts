@@ -40,7 +40,9 @@ export function usePeople(familyId: string | null) {
         { event: "*", schema: "public", table: "relationships", filter: `family_id=eq.${familyId}` },
         fetchAll
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) console.warn("usePeople realtime error:", err);
+      });
 
     return () => {
       supabase.removeChannel(channel);
