@@ -47,13 +47,13 @@ export interface Relationship {
 
 export interface Memory {
   id: string;
-  person_id: string;
   family_id: string;
   type: MemoryType;
   title: string;
   description: string | null;
   storage_url: string | null;
   recorded_by: string;
+  date_of_memory: string | null;
   created_at: string;
   recorder?: {
     email: string;

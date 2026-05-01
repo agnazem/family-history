@@ -13,13 +13,21 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
   const [recording, setRecording] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [micError, setMicError] = useState<string | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function startRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setMicError(null);
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setMicError("Microphone access was denied. Please allow microphone access in your browser settings and try again.");
+      return;
+    }
     const mimeType = [
       "audio/webm;codecs=opus",
       "audio/webm",
@@ -27,7 +35,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
       "audio/mp4",
     ].find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
 
-    const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const mr = new MediaRecorder(stream!, mimeType ? { mimeType } : undefined);
     mediaRecorder.current = mr;
     chunks.current = [];
 
@@ -106,6 +114,10 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
   }
 
   return (
+    <div className="space-y-2">
+      {micError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{micError}</p>
+      )}
     <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
       {recording ? (
         <>
@@ -136,6 +148,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
           </button>
         </>
       )}
+    </div>
     </div>
   );
 }

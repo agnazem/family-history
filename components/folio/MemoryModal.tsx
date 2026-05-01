@@ -1,12 +1,21 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Trash2, Play, Pause, Download, Pencil, Check, X, Users } from "lucide-react";
+import { Trash2, Play, Pause, Download, Pencil, Check, X, Users, MessageCircle, Send } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
 import Image from "next/image";
 import type { Memory, Person } from "@/types";
+
+interface Comment {
+  id: string;
+  memory_id: string;
+  family_id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+}
 
 interface MemoryModalProps {
   memory: Memory | null;
@@ -22,27 +31,45 @@ const TYPE_LABELS: Record<string, string> = {
   note: "Written Note",
 };
 
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 export function MemoryModal({ memory, familyPeople, onClose, onChanged }: MemoryModalProps) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [dateOfMemory, setDateOfMemory] = useState("");
   const [saving, setSaving] = useState(false);
   const [playing, setPlaying] = useState(false);
 
-  // People tagging state
   const [taggedIds, setTaggedIds] = useState<Set<string>>(new Set());
   const [originalTaggedIds, setOriginalTaggedIds] = useState<Set<string>>(new Set());
+
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [memberNames, setMemberNames] = useState<Record<string, string>>({});
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const supabase = createClient();
 
-  // Reset all state when the memory changes, and fetch current tags
   useEffect(() => {
     if (!memory) return;
     setTitle(memory.title);
     setDescription(memory.description ?? "");
+    setDateOfMemory(memory.date_of_memory ?? "");
     setEditing(false);
     setPlaying(false);
+    setCommentText("");
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -57,6 +84,25 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
         setTaggedIds(ids);
         setOriginalTaggedIds(ids);
       });
+
+    Promise.all([
+      supabase
+        .from("comments")
+        .select("*")
+        .eq("memory_id", memory.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("family_members")
+        .select("user_id, display_name")
+        .eq("family_id", memory.family_id),
+    ]).then(([{ data: commentsData }, { data: membersData }]) => {
+      setComments((commentsData ?? []) as Comment[]);
+      const names: Record<string, string> = {};
+      for (const m of membersData ?? []) {
+        names[m.user_id] = m.display_name ?? "Family member";
+      }
+      setMemberNames(names);
+    });
   }, [memory?.id]);
 
   if (!memory) return null;
@@ -89,13 +135,15 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
     if (!memory) return;
     setSaving(true);
 
-    // Update title / description
     await supabase
       .from("memories")
-      .update({ title, description: description || null })
+      .update({
+        title,
+        description: description || null,
+        date_of_memory: dateOfMemory || null,
+      })
       .eq("id", memory.id);
 
-    // Sync memory_people: insert added, delete removed
     const added = [...taggedIds].filter((id) => !originalTaggedIds.has(id));
     const removed = [...originalTaggedIds].filter((id) => !taggedIds.has(id));
 
@@ -134,15 +182,36 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
     if (!memory) return;
     setTitle(memory.title);
     setDescription(memory.description ?? "");
+    setDateOfMemory(memory.date_of_memory ?? "");
     setTaggedIds(new Set(originalTaggedIds));
     setEditing(false);
   }
 
-  // People tagged (for view mode display)
+  async function handleAddComment() {
+    if (!memory || !commentText.trim()) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setSubmittingComment(true);
+    await supabase.from("comments").insert({
+      memory_id: memory.id,
+      family_id: memory.family_id,
+      user_id: user.id,
+      text: commentText.trim(),
+    });
+    setCommentText("");
+    const { data } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("memory_id", memory.id)
+      .order("created_at", { ascending: true });
+    setComments((data ?? []) as Comment[]);
+    setSubmittingComment(false);
+  }
+
   const taggedPeople = familyPeople.filter((p) => taggedIds.has(p.id));
 
   return (
-    <Modal open={!!memory} onClose={onClose} title={TYPE_LABELS[memory.type] ?? "Memory"} size="md">
+    <Modal open={!!memory} onClose={onClose} title={TYPE_LABELS[memory.type] ?? "Memory"} size="lg">
       <div className="space-y-4">
 
         {/* Title */}
@@ -156,7 +225,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
           ) : (
             <p className="text-base font-semibold text-gray-900">{memory.title}</p>
           )}
-          <p className="text-xs text-gray-400 mt-0.5">{formatDate(memory.created_at)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Added {formatDate(memory.created_at)}</p>
         </div>
 
         {/* Media */}
@@ -211,7 +280,22 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
           )}
         </div>
 
-        {/* People tagging — pill picker in edit mode, compact list in view mode */}
+        {/* Date of memory */}
+        {editing ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Date of memory</label>
+            <input
+              type="date"
+              value={dateOfMemory}
+              onChange={(e) => setDateOfMemory(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        ) : memory.date_of_memory ? (
+          <p className="text-xs text-gray-500">Memory from {formatDate(memory.date_of_memory)}</p>
+        ) : null}
+
+        {/* People tagging */}
         {editing ? (
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-2">
@@ -293,6 +377,57 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
             </button>
           </div>
         )}
+
+        {/* Comments */}
+        <div className="border-t border-gray-100 pt-4">
+          <div className="flex items-center gap-1.5 mb-3">
+            <MessageCircle className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
+            </span>
+          </div>
+
+          {comments.length > 0 && (
+            <div className="space-y-3 mb-4">
+              {comments.map((c) => (
+                <div key={c.id}>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs font-medium text-gray-700">
+                      {memberNames[c.user_id] ?? "Family member"}
+                    </span>
+                    <span className="text-xs text-gray-400">{relativeTime(c.created_at)}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{c.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              maxLength={1000}
+              rows={2}
+              placeholder="Add a comment..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <span className={`text-xs ${commentText.length > 900 ? "text-orange-500" : "text-gray-400"}`}>
+                {commentText.length}/1000
+              </span>
+              <button
+                onClick={handleAddComment}
+                disabled={submittingComment || !commentText.trim()}
+                className="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {submittingComment ? "Posting..." : "Post"}
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </Modal>
   );

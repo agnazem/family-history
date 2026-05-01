@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity } from "lucide-react";
 import { SearchModal } from "@/components/search/SearchModal";
 import { createClient } from "@/lib/supabase/client";
 import { computeLayout } from "@/lib/layout";
@@ -15,6 +15,7 @@ import type { MemoryType } from "@/types";
 
 export default function TreePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { family, member, loading: familyLoading } = useFamily();
   const { people, relationships, loading: peopleLoading, refetch } = usePeople(family?.id ?? null);
 
@@ -23,6 +24,8 @@ export default function TreePage() {
   const [showSearch, setShowSearch] = useState(false);
   const [layouting, setLayouting] = useState(false);
   const [memoryTypes, setMemoryTypes] = useState<Record<string, MemoryType[]>>({});
+  const [memoryCounts, setMemoryCounts] = useState<Record<string, number>>({});
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => searchParams.get("welcome") === "1");
 
   const supabase = createClient();
 
@@ -34,16 +37,19 @@ export default function TreePage() {
       .eq("family_id", family.id)
       .then(({ data }) => {
         if (!data) return;
-        const map: Record<string, MemoryType[]> = {};
+        const typeMap: Record<string, MemoryType[]> = {};
+        const countMap: Record<string, number> = {};
         for (const row of data as unknown as { person_id: string; memories: { type: string } | { type: string }[] }[]) {
           const pid = row.person_id;
           const mem = Array.isArray(row.memories) ? row.memories[0] : row.memories;
           if (!mem) continue;
           const t = mem.type as MemoryType;
-          if (!map[pid]) map[pid] = [];
-          if (!map[pid].includes(t)) map[pid].push(t);
+          if (!typeMap[pid]) typeMap[pid] = [];
+          if (!typeMap[pid].includes(t)) typeMap[pid].push(t);
+          countMap[pid] = (countMap[pid] ?? 0) + 1;
         }
-        setMemoryTypes(map);
+        setMemoryTypes(typeMap);
+        setMemoryCounts(countMap);
       });
   }, [family?.id, people]);
 
@@ -124,6 +130,22 @@ export default function TreePage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => router.push("/timeline")}
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            title="Timeline"
+          >
+            <Clock className="w-4 h-4" />
+            Timeline
+          </button>
+          <button
+            onClick={() => router.push("/activity")}
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            title="Activity"
+          >
+            <Activity className="w-4 h-4" />
+            Activity
+          </button>
+          <button
             onClick={() => setShowSearch(true)}
             className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
             title="Search (⌘K)"
@@ -173,6 +195,25 @@ export default function TreePage() {
         </div>
       </header>
 
+      {/* Welcome / invite nudge */}
+      {showWelcomeBanner && member?.role === "admin" && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-600 text-white text-sm">
+          <Users className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">
+            Welcome! Invite family members so they can add memories and help grow the tree.
+          </span>
+          <button
+            onClick={() => router.push("/settings")}
+            className="font-semibold underline underline-offset-2 hover:no-underline"
+          >
+            Invite Members
+          </button>
+          <button onClick={() => setShowWelcomeBanner(false)} className="ml-1 hover:opacity-70">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Canvas */}
       <main className="flex-1 relative">
         {people.length === 0 ? (
@@ -195,6 +236,7 @@ export default function TreePage() {
             relationships={relationships}
             onNodeClick={handleNodeClick}
             memoryTypes={memoryTypes}
+            memoryCounts={memoryCounts}
           />
         )}
       </main>

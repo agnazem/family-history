@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useMemories } from "@/lib/hooks/useMemories";
@@ -11,7 +11,7 @@ import { AddMemoryModal } from "@/components/folio/AddMemoryModal";
 import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
-import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Person, Relationship } from "@/types";
 
@@ -34,9 +34,27 @@ export default function PersonPage() {
   const [pendingIntent, setPendingIntent] = useState<RelationIntent | null>(null);
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<import("@/types").Memory | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
-  const { memories, loading: memoriesLoading, refetch: refetchMemories } = useMemories(id);
+  const { memories, tagMap, loading: memoriesLoading, refetch: refetchMemories } = useMemories(id, person?.family_id ?? null);
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !person) return;
+    setUploadingPhoto(true);
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `profiles/${person.family_id}/${id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("photos").upload(path, file, { upsert: true });
+    if (!uploadError) {
+      const { data } = supabase.storage.from("photos").getPublicUrl(path);
+      await supabase.from("people").update({ profile_photo_url: data.publicUrl }).eq("id", id);
+      setPerson((prev) => prev ? { ...prev, profile_photo_url: data.publicUrl } : prev);
+    }
+    setUploadingPhoto(false);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  }
 
   const loadRelationships = useCallback(async (familyId: string) => {
     const [{ data: rels }, { data: people }] = await Promise.all([
@@ -112,7 +130,27 @@ export default function PersonPage() {
           </button>
 
           <div className="flex items-start gap-4">
-            <Avatar src={person.profile_photo_url} name={fullName} size="xl" />
+            <div className="relative group flex-shrink-0">
+              <Avatar src={person.profile_photo_url} name={fullName} size="xl" />
+              <label
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                title="Change photo"
+              >
+                {uploadingPhoto ? (
+                  <span className="text-white text-xs">...</span>
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingPhoto}
+                />
+              </label>
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <h1 className="text-2xl font-bold text-gray-900">{fullName}</h1>
@@ -220,9 +258,20 @@ export default function PersonPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {memories.map((m) => (
-                <MemoryCard key={m.id} memory={m} onClick={() => setSelectedMemory(m)} />
-              ))}
+              {memories.map((m) => {
+                const otherTagged = (tagMap[m.id] ?? [])
+                  .filter((pid) => pid !== id)
+                  .map((pid) => familyPeople.find((p) => p.id === pid))
+                  .filter(Boolean) as Person[];
+                return (
+                  <MemoryCard
+                    key={m.id}
+                    memory={m}
+                    taggedPeople={otherTagged}
+                    onClick={() => setSelectedMemory(m)}
+                  />
+                );
+              })}
             </div>
           )}
         </section>

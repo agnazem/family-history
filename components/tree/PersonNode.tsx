@@ -5,7 +5,7 @@ import { Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import type { Person, MemoryType } from "@/types";
 
-export type PersonNodeData = Person & { onClick: (id: string) => void; memoryTypes?: MemoryType[] };
+export type PersonNodeData = Person & { onClick: (id: string) => void; memoryTypes?: MemoryType[]; memoryCount?: number };
 
 const MEMORY_ICONS: Record<MemoryType, { Icon: React.ElementType; className: string }> = {
   audio:    { Icon: Mic,       className: "text-purple-500" },
@@ -34,6 +34,7 @@ export function PersonNode({ data }: NodeProps) {
       : null;
 
   const memoryTypes = person.memoryTypes ?? [];
+  const memoryCount = person.memoryCount ?? 0;
 
   return (
     <>
@@ -60,6 +61,11 @@ export function PersonNode({ data }: NodeProps) {
                 const { Icon, className } = MEMORY_ICONS[type];
                 return <Icon key={type} className={`w-3 h-3 ${className}`} />;
               })}
+              {memoryCount > 0 && (
+                <span className="ml-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 leading-none">
+                  {memoryCount}
+                </span>
+              )}
             </div>
           )}
         </div>

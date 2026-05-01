@@ -31,9 +31,9 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-xl p-6`}
+        className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-xl overflow-hidden`}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
@@ -42,7 +42,9 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
             <X className="w-5 h-5" />
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto max-h-[75vh] px-6 pb-6">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ export default function NewFamilyPage() {
       return;
     }
 
-    router.push("/tree");
+    router.push("/tree?welcome=1");
   }
 
   return (

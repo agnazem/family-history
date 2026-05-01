@@ -52,23 +52,27 @@ export function SearchModal({
 }: SearchModalProps) {
   const [query, setQuery] = useState("");
   const [allMemories, setAllMemories] = useState<Memory[]>([]);
+  const [memoryPersonMap, setMemoryPersonMap] = useState<Record<string, string>>({});
   const [loadingMemories, setLoadingMemories] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
-  // Fetch all family memories once when modal opens
+  // Fetch all family memories + person tags once when modal opens
   useEffect(() => {
     if (!open || !familyId) return;
     setLoadingMemories(true);
-    supabase
-      .from("memories")
-      .select("*")
-      .eq("family_id", familyId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setAllMemories(data ?? []);
-        setLoadingMemories(false);
-      });
+    Promise.all([
+      supabase.from("memories").select("*").eq("family_id", familyId).order("created_at", { ascending: false }),
+      supabase.from("memory_people").select("memory_id, person_id").eq("family_id", familyId),
+    ]).then(([{ data: memories }, { data: tags }]) => {
+      setAllMemories(memories ?? []);
+      const map: Record<string, string> = {};
+      for (const t of tags ?? []) {
+        if (!map[t.memory_id]) map[t.memory_id] = t.person_id;
+      }
+      setMemoryPersonMap(map);
+      setLoadingMemories(false);
+    });
   }, [open, familyId]);
 
   // Focus input when opened
@@ -104,7 +108,8 @@ export function SearchModal({
   const hasResults = matchedPeople.length > 0 || matchedMemories.length > 0;
 
   function getPersonForMemory(m: Memory) {
-    return people.find((p) => p.id === m.person_id);
+    const personId = memoryPersonMap[m.id];
+    return personId ? people.find((p) => p.id === personId) : undefined;
   }
 
   return (

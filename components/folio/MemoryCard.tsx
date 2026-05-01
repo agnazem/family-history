@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Mic, Image as ImageIcon, FileText, PenLine, Play, Pause, Download } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, PenLine, Play, Pause, Download, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import type { Memory } from "@/types";
+import type { Memory, Person } from "@/types";
 import Image from "next/image";
 
 const TYPE_ICONS = {
@@ -22,10 +22,11 @@ const TYPE_COLORS = {
 
 interface MemoryCardProps {
   memory: Memory;
+  taggedPeople?: Person[];
   onClick?: () => void;
 }
 
-export function MemoryCard({ memory, onClick }: MemoryCardProps) {
+export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const Icon = TYPE_ICONS[memory.type];
@@ -103,6 +104,13 @@ export function MemoryCard({ memory, onClick }: MemoryCardProps) {
           {memory.description && (
             <p className="text-sm mt-2 opacity-80 leading-relaxed">
               {memory.description}
+            </p>
+          )}
+
+          {taggedPeople && taggedPeople.length > 0 && (
+            <p className="flex items-center gap-1 text-xs mt-2 opacity-60">
+              <Users className="w-3 h-3 flex-shrink-0" />
+              {taggedPeople.map((p) => `${p.first_name} ${p.last_name}`).join(", ")}
             </p>
           )}
         </div>

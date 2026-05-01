@@ -99,35 +99,23 @@ export function AddMemoryModal({
       storageUrl = data.publicUrl;
     }
 
-    const { data: inserted, error: insertError } = await supabase
-      .from("memories")
-      .insert({
-        person_id: personId,
-        family_id: familyId,
-        type: memType,
-        title: title || (memType === "audio" ? "Voice Recording" : "Memory"),
-        description: description || null,
-        storage_url: storageUrl,
-        recorded_by: user.id,
-      })
-      .select("id")
-      .single();
+    const allTagged = [personId, ...Array.from(taggedIds)];
+    const { data: memoryId, error: insertError } = await supabase.rpc("create_memory_with_people", {
+      p_family_id: familyId,
+      p_type: memType,
+      p_title: title || (memType === "audio" ? "Voice Recording" : "Memory"),
+      p_description: description || null,
+      p_storage_url: storageUrl,
+      p_recorded_by: user.id,
+      p_date_of_memory: null,
+      p_person_ids: allTagged,
+    });
 
-    if (insertError || !inserted) {
+    if (insertError || !memoryId) {
       setError(insertError?.message ?? "Failed to save memory.");
       setLoading(false);
       return;
     }
-
-    // Tag primary person + any selected additional people
-    const allTagged = [personId, ...Array.from(taggedIds)];
-    await supabase.from("memory_people").insert(
-      allTagged.map((pid) => ({
-        memory_id: inserted.id,
-        person_id: pid,
-        family_id: familyId,
-      }))
-    );
 
     onAdded();
     handleClose();
