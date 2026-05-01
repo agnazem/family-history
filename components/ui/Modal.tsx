@@ -37,12 +37,12 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1 -mr-1 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="overflow-y-auto max-h-[75vh] px-6 pb-6">
+        <div className="overflow-y-auto max-h-[80vh] sm:max-h-[75vh] px-6 pb-6">
           {children}
         </div>
       </div>

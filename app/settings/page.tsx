@@ -208,7 +208,7 @@ export default function SettingsPage() {
                       </span>
                     </div>
 
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {m.full_name ?? m.email}
                         {isSelf && <span className="ml-1.5 text-xs text-gray-400">(you)</span>}
@@ -235,20 +235,20 @@ export default function SettingsPage() {
                             onClick={() => handleChangeRole(m, "admin")}
                             disabled={busy}
                             title="Make admin"
-                            className="flex items-center gap-1 text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 text-xs p-1.5 sm:px-2 sm:py-1 text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors disabled:opacity-40"
                           >
-                            <ShieldCheck className="w-3 h-3" />
-                            Make admin
+                            <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Make admin</span>
                           </button>
                         ) : (
                           <button
                             onClick={() => handleChangeRole(m, "member")}
                             disabled={busy || isLastAdmin}
                             title={isLastAdmin ? "Cannot demote the only admin" : "Make member"}
-                            className="flex items-center gap-1 text-xs px-2 py-1 text-gray-500 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 text-xs p-1.5 sm:px-2 sm:py-1 text-gray-500 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40"
                           >
-                            <ShieldOff className="w-3 h-3" />
-                            Make member
+                            <ShieldOff className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Make member</span>
                           </button>
                         )}
                         <button
@@ -277,7 +277,7 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500 mb-4">
             If someone already created an account but wasn&apos;t invited through the app, enter their email to add them directly.
           </p>
-          <form onSubmit={handleAddExisting} className="flex gap-2">
+          <form onSubmit={handleAddExisting} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={addEmail}
@@ -289,7 +289,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={adding}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2 rounded-lg disabled:opacity-50 font-medium"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
               {adding ? "Adding…" : "Add"}
             </button>
@@ -336,7 +336,7 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500 mb-4">
             They&apos;ll receive an email with a link to join {family.name} as a member.
           </p>
-          <form onSubmit={handleInvite} className="flex gap-2">
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={inviteEmail}
@@ -348,7 +348,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={inviting}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2 rounded-lg disabled:opacity-50 font-medium"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
               {inviting ? "Sending…" : "Send Invite"}
             </button>

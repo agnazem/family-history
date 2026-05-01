@@ -109,7 +109,7 @@ export default function EditPersonPage() {
           <h1 className="text-xl font-bold text-gray-900 mb-6">Edit Person</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
                 <input
@@ -129,7 +129,7 @@ export default function EditPersonPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
                 <input

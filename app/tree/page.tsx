@@ -124,35 +124,35 @@ export default function TreePage() {
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Toolbar */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-blue-100 shadow-sm z-10">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-blue-600" />
-          <span className="font-semibold text-gray-900">{family.name}</span>
+      <header className="flex items-center justify-between px-3 py-2 bg-white border-b border-blue-100 shadow-sm z-10 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <span className="font-semibold text-gray-900 truncate text-sm sm:text-base">{family.name}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => router.push("/timeline")}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors"
             title="Timeline"
           >
-            <Clock className="w-4 h-4" />
-            Timeline
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Timeline</span>
           </button>
           <button
             onClick={() => setSelectMode((s) => !s)}
-            className={`flex items-center gap-1.5 border text-sm px-3 py-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors ${
               selectMode
                 ? "bg-blue-100 border-blue-400 text-blue-700"
                 : "border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
             title={selectMode ? "Switch to pan mode" : "Switch to select mode (drag to select, Shift+click to add)"}
           >
-            <MousePointer2 className="w-4 h-4" />
-            {selectMode ? "Selecting" : "Select"}
+            <MousePointer2 className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">{selectMode ? "Selecting" : "Select"}</span>
           </button>
           <button
             onClick={() => router.push("/activity")}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="hidden sm:flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
             title="Activity"
           >
             <Activity className="w-4 h-4" />
@@ -160,23 +160,25 @@ export default function TreePage() {
           </button>
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors"
             title="Search (⌘K)"
           >
-            <Search className="w-4 h-4" />
-            Search
+            <Search className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Search</span>
           </button>
           <button
             onClick={() => setShowAddPerson(true)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors"
+            title="Add Person"
           >
-            <UserPlus className="w-4 h-4" />
-            Add Person
+            <UserPlus className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Add Person</span>
           </button>
           <button
             onClick={() => setShowAddRelationship(true)}
             disabled={people.length < 2}
-            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="hidden sm:flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            title="Add Relationship"
           >
             <GitMerge className="w-4 h-4" />
             Add Relationship
@@ -184,7 +186,8 @@ export default function TreePage() {
           <button
             onClick={handleAutoLayout}
             disabled={layouting || people.length === 0}
-            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="hidden sm:flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            title={layouting ? "Laying out..." : "Auto Layout"}
           >
             <LayoutDashboard className="w-4 h-4" />
             {layouting ? "Laying out..." : "Auto Layout"}
@@ -192,7 +195,7 @@ export default function TreePage() {
           {member?.role === "admin" && (
             <button
               onClick={() => router.push("/settings")}
-              className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
               title="Settings"
             >
               <Settings className="w-5 h-5" />
@@ -200,7 +203,7 @@ export default function TreePage() {
           )}
           <button
             onClick={handleSignOut}
-            className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
             title="Sign out"
           >
             <LogOut className="w-5 h-5" />
