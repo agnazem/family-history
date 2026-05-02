@@ -11,8 +11,9 @@ import { AddMemoryModal } from "@/components/folio/AddMemoryModal";
 import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
-import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useFamily } from "@/lib/hooks/useFamily";
 import type { Person, Relationship } from "@/types";
 
 const RELATIONSHIP_SECTION_LABELS: Record<string, string> = {
@@ -25,7 +26,9 @@ const RELATIONSHIP_SECTION_LABELS: Record<string, string> = {
 export default function PersonPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { member: currentMember } = useFamily();
   const [person, setPerson] = useState<Person | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [familyPeople, setFamilyPeople] = useState<Person[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +82,24 @@ export default function PersonPage() {
     }
     load();
   }, [id]);
+
+  async function handleDelete() {
+    if (!person) return;
+    if (!confirm(`Permanently delete ${person.first_name} ${person.last_name}? This will also remove all their relationships and memories. This cannot be undone.`)) return;
+    setDeleting(true);
+    const res = await fetch("/api/people", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId: id, familyId: person.family_id }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+      setDeleting(false);
+    } else {
+      router.push("/tree");
+    }
+  }
 
   if (loading) {
     return (
@@ -154,13 +175,26 @@ export default function PersonPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <h1 className="text-2xl font-bold text-gray-900">{fullName}</h1>
-                <button
-                  onClick={() => router.push(`/person/${id}/edit`)}
-                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 border border-gray-300 hover:border-blue-400 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => router.push(`/person/${id}/edit`)}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 border border-gray-300 hover:border-blue-400 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
+                  {currentMember?.role === "admin" && (
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      title="Delete person"
+                      className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{deleting ? "Deleting…" : "Delete"}</span>
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500">
                 {person.dob && <span>Born {formatDate(person.dob)}</span>}

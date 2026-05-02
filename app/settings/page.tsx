@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
 import {
   ArrowLeft, UserPlus, Mail, Crown, Users, Trash2,
-  ShieldCheck, ShieldOff, X, CheckCircle, AlertCircle,
+  ShieldCheck, ShieldOff, X, CheckCircle, AlertCircle, UserCheck,
 } from "lucide-react";
 import type { Invitation } from "@/types";
 
@@ -27,6 +27,8 @@ export default function SettingsPage() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [addEmail, setAddEmail] = useState("");
+  const [adding, setAdding] = useState(false);
   const [flash, setFlash] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const supabase = createClient();
@@ -73,6 +75,25 @@ export default function SettingsPage() {
       loadData();
     }
     setInviting(false);
+  }
+
+  async function handleAddExisting(e: React.FormEvent) {
+    e.preventDefault();
+    setAdding(true);
+    const res = await fetch("/api/members", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: addEmail, familyId: family?.id }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      showFlash("error", data.error);
+    } else {
+      showFlash("success", `${addEmail} has been added to ${family?.name}.`);
+      setAddEmail("");
+      loadData();
+    }
+    setAdding(false);
   }
 
   async function handleCancelInvite(inv: Invitation) {
@@ -165,6 +186,11 @@ export default function SettingsPage() {
             <span className="ml-auto text-xs text-gray-400">{members.length} total</span>
           </div>
 
+          <div className="px-6 py-2 bg-slate-50 border-b border-gray-100 flex gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1"><Crown className="w-3 h-3 text-blue-500" /> <strong>Admin</strong> — invite &amp; manage members, access this panel</span>
+            <span className="flex items-center gap-1"><Users className="w-3 h-3 text-gray-400" /> <strong>Member</strong> — view &amp; contribute to the family tree</span>
+          </div>
+
           {members.length === 0 ? (
             <p className="px-6 py-8 text-sm text-gray-400 text-center">No members yet.</p>
           ) : (
@@ -182,7 +208,7 @@ export default function SettingsPage() {
                       </span>
                     </div>
 
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {m.full_name ?? m.email}
                         {isSelf && <span className="ml-1.5 text-xs text-gray-400">(you)</span>}
@@ -208,19 +234,21 @@ export default function SettingsPage() {
                           <button
                             onClick={() => handleChangeRole(m, "admin")}
                             disabled={busy}
-                            title="Promote to admin"
-                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40"
+                            title="Make admin"
+                            className="flex items-center gap-1 text-xs p-1.5 sm:px-2 sm:py-1 text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors disabled:opacity-40"
                           >
-                            <ShieldCheck className="w-4 h-4" />
+                            <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Make admin</span>
                           </button>
                         ) : (
                           <button
                             onClick={() => handleChangeRole(m, "member")}
                             disabled={busy || isLastAdmin}
-                            title={isLastAdmin ? "Cannot demote the only admin" : "Demote to member"}
-                            className="p-1.5 text-gray-400 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-40"
+                            title={isLastAdmin ? "Cannot demote the only admin" : "Make member"}
+                            className="flex items-center gap-1 text-xs p-1.5 sm:px-2 sm:py-1 text-gray-500 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40"
                           >
-                            <ShieldOff className="w-4 h-4" />
+                            <ShieldOff className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Make member</span>
                           </button>
                         )}
                         <button
@@ -238,6 +266,34 @@ export default function SettingsPage() {
               })}
             </ul>
           )}
+        </section>
+
+        {/* Add existing user */}
+        <section className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+          <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
+            <UserCheck className="w-4 h-4 text-blue-600" />
+            Add Existing Member
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            If someone already created an account but wasn&apos;t invited through the app, enter their email to add them directly.
+          </p>
+          <form onSubmit={handleAddExisting} className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="email"
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
+              required
+              placeholder="their@email.com"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={adding}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
+            >
+              {adding ? "Adding…" : "Add"}
+            </button>
+          </form>
         </section>
 
         {/* Pending invitations */}
@@ -280,7 +336,7 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500 mb-4">
             They&apos;ll receive an email with a link to join {family.name} as a member.
           </p>
-          <form onSubmit={handleInvite} className="flex gap-2">
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={inviteEmail}
@@ -292,7 +348,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={inviting}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2 rounded-lg disabled:opacity-50 font-medium"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
               {inviting ? "Sending…" : "Send Invite"}
             </button>

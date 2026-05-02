@@ -93,7 +93,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
         <button
           type="button"
           onClick={togglePlay}
-          className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700"
+          className="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700"
         >
           {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
@@ -128,7 +128,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
           <button
             type="button"
             onClick={stopRecording}
-            className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600"
+            className="w-11 h-11 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600"
           >
             <Square className="w-4 h-4" />
           </button>
@@ -142,7 +142,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
           <button
             type="button"
             onClick={startRecording}
-            className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
+            className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
           >
             <Mic className="w-4 h-4" />
           </button>
