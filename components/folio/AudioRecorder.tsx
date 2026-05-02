@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Mic, Square, Play, Pause, Upload, Trash2 } from "lucide-react";
+import { Mic, Square, Play, Pause, Trash2 } from "lucide-react";
 
 interface AudioRecorderProps {
   onRecorded: (blob: Blob) => void;
@@ -101,7 +101,6 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
           <p className="text-sm font-medium text-green-800">Recording ready</p>
           <p className="text-xs text-green-600">{fmtTime(duration)} recorded</p>
         </div>
-        <Upload className="w-4 h-4 text-green-600" />
         <button
           type="button"
           onClick={handleClear}
