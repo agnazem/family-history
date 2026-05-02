@@ -284,7 +284,7 @@ export default function PersonPage() {
           </div>
 
           {memoriesLoading ? (
-            <p className="text-gray-400 text-sm">Loading memories...</p>
+            <p className="text-gray-400 text-sm">Loading memories…</p>
           ) : memories.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <p className="mb-2">No memories yet for {person.first_name}.</p>

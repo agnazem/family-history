@@ -187,10 +187,10 @@ export default function TreePage() {
             onClick={handleAutoLayout}
             disabled={layouting || people.length === 0}
             className="hidden sm:flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-            title={layouting ? "Laying out..." : "Auto Layout"}
+            title={layouting ? "Laying out…" : "Auto Layout"}
           >
             <LayoutDashboard className="w-4 h-4" />
-            {layouting ? "Laying out..." : "Auto Layout"}
+            {layouting ? "Laying out…" : "Auto Layout"}
           </button>
           {member?.role === "admin" && (
             <button

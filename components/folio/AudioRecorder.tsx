@@ -123,7 +123,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
         <>
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <span className="flex-1 text-sm text-gray-700">
-            Recording... {fmtTime(duration)}
+            Recording… {fmtTime(duration)}
           </span>
           <button
             type="button"

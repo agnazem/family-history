@@ -183,7 +183,7 @@ export default function EditPersonPage() {
                 disabled={loading}
                 className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </form>
