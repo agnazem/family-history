@@ -12,6 +12,7 @@ import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Spinner } from "@/components/ui/Spinner";
 import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useFamily } from "@/lib/hooks/useFamily";
@@ -107,7 +108,7 @@ export default function PersonPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-blue-600">Loading...</p>
+        <Spinner />
       </div>
     );
   }

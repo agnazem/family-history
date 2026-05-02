@@ -9,6 +9,7 @@ import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity, MousePointer2 } from "lucide-react";
 import { SearchModal } from "@/components/search/SearchModal";
+import { Spinner } from "@/components/ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { computeLayout } from "@/lib/layout";
 import type { MemoryType } from "@/types";
@@ -94,7 +95,7 @@ export default function TreePage() {
   if (familyLoading || peopleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-blue-600">Loading your family tree...</p>
+        <Spinner />
       </div>
     );
   }

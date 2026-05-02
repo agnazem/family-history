@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
+import { Spinner } from "@/components/ui/Spinner";
 import type { Person } from "@/types";
 
 export default function EditPersonPage() {
@@ -89,7 +90,7 @@ export default function EditPersonPage() {
   if (fetching) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-blue-600">Loading...</p>
+        <Spinner />
       </div>
     );
   }
