@@ -124,86 +124,102 @@ export default function TreePage() {
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Toolbar */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-blue-100 shadow-sm z-10">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-blue-600" />
-          <span className="font-semibold text-gray-900">{family.name}</span>
+      <header className="flex items-center justify-between px-3 py-2 bg-white border-b border-blue-100 shadow-sm z-10 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-shrink-0 mr-2">
+          <BookOpen className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <span className="font-semibold text-gray-900 truncate hidden sm:block">{family.name}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 flex-wrap justify-end">
+          {/* View nav group */}
           <button
             onClick={() => router.push("/timeline")}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-2 rounded-lg transition-colors min-h-[40px]"
             title="Timeline"
           >
-            <Clock className="w-4 h-4" />
-            Timeline
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden md:inline">Timeline</span>
           </button>
           <button
+            onClick={() => router.push("/activity")}
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-2 rounded-lg transition-colors min-h-[40px]"
+            title="Activity"
+          >
+            <Activity className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden md:inline">Activity</span>
+          </button>
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-2 rounded-lg transition-colors min-h-[40px]"
+            title="Search (⌘K)"
+          >
+            <Search className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden md:inline">Search</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-gray-200 mx-0.5" />
+
+          {/* Canvas tools group */}
+          <button
             onClick={() => setSelectMode((s) => !s)}
-            className={`flex items-center gap-1.5 border text-sm px-3 py-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 border text-sm px-2.5 py-2 rounded-lg transition-colors min-h-[40px] ${
               selectMode
                 ? "bg-blue-100 border-blue-400 text-blue-700"
                 : "border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
-            title={selectMode ? "Switch to pan mode" : "Switch to select mode (drag to select, Shift+click to add)"}
+            title={selectMode ? "Switch to pan mode" : "Switch to select mode"}
           >
-            <MousePointer2 className="w-4 h-4" />
-            {selectMode ? "Selecting" : "Select"}
-          </button>
-          <button
-            onClick={() => router.push("/activity")}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
-            title="Activity"
-          >
-            <Activity className="w-4 h-4" />
-            Activity
-          </button>
-          <button
-            onClick={() => setShowSearch(true)}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-1.5 rounded-lg transition-colors"
-            title="Search (⌘K)"
-          >
-            <Search className="w-4 h-4" />
-            Search
-          </button>
-          <button
-            onClick={() => setShowAddPerson(true)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <UserPlus className="w-4 h-4" />
-            Add Person
-          </button>
-          <button
-            onClick={() => setShowAddRelationship(true)}
-            disabled={people.length < 2}
-            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-          >
-            <GitMerge className="w-4 h-4" />
-            Add Relationship
+            <MousePointer2 className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">{selectMode ? "Selecting" : "Select"}</span>
           </button>
           <button
             onClick={handleAutoLayout}
             disabled={layouting || people.length === 0}
-            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-2 rounded-lg transition-colors disabled:opacity-40 min-h-[40px]"
+            title="Auto Layout"
           >
-            <LayoutDashboard className="w-4 h-4" />
-            {layouting ? "Laying out..." : "Auto Layout"}
+            <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">{layouting ? "Laying out..." : "Auto Layout"}</span>
           </button>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-gray-200 mx-0.5" />
+
+          {/* Primary actions group */}
+          <button
+            onClick={() => setShowAddPerson(true)}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-2.5 py-2 rounded-lg transition-colors min-h-[40px]"
+          >
+            <UserPlus className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Add Person</span>
+          </button>
+          <button
+            onClick={() => setShowAddRelationship(true)}
+            disabled={people.length < 2}
+            className="flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-2.5 py-2 rounded-lg transition-colors disabled:opacity-40 min-h-[40px]"
+          >
+            <GitMerge className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Add Relationship</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-gray-200 mx-0.5" />
+
           {member?.role === "admin" && (
             <button
               onClick={() => router.push("/settings")}
-              className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[40px] min-w-[40px] flex items-center justify-center"
               title="Settings"
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4" />
             </button>
           )}
           <button
             onClick={handleSignOut}
-            className="p-1.5 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[40px] min-w-[40px] flex items-center justify-center"
             title="Sign out"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </header>
