@@ -31,12 +31,15 @@ export default function SettingsPage() {
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [flash, setFlash] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [flashVisible, setFlashVisible] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<MemberRow | null>(null);
   const supabase = createClient();
 
   function showFlash(type: "success" | "error", msg: string) {
     setFlash({ type, msg });
+    setFlashVisible(true);
+    setTimeout(() => setFlashVisible(false), 3500);
     setTimeout(() => setFlash(null), 4000);
   }
 
@@ -167,7 +170,9 @@ export default function SettingsPage() {
 
         {/* Flash message */}
         {flash && (
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm font-medium ${
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm font-medium transition-opacity duration-500 ${
+            flashVisible ? "opacity-100" : "opacity-0"
+          } ${
             flash.type === "success"
               ? "bg-green-50 text-green-700 border border-green-200"
               : "bg-red-50 text-red-700 border border-red-200"
