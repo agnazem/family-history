@@ -186,7 +186,7 @@ export default function TimelinePage() {
                             {entry.type === "audio" && entry.storage_url && (
                               <button
                                 onClick={() => toggleAudio(entry)}
-                                className="flex items-center gap-2 mt-2 text-xs font-medium opacity-80 hover:opacity-100"
+                                className="flex items-center gap-1.5 mt-2 text-xs font-medium px-2.5 py-1.5 rounded-md border border-current opacity-80 hover:opacity-100 transition-opacity min-h-[32px]"
                               >
                                 {playingId === entry.id ? (
                                   <><Pause className="w-3.5 h-3.5" /> Pause</>
