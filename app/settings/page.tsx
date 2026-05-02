@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   ArrowLeft, UserPlus, Mail, Crown, Users, Trash2,
   ShieldCheck, ShieldOff, X, CheckCircle, AlertCircle, UserCheck,
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const [adding, setAdding] = useState(false);
   const [flash, setFlash] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<MemberRow | null>(null);
   const supabase = createClient();
 
   function showFlash(type: "success" | "error", msg: string) {
@@ -123,7 +125,6 @@ export default function SettingsPage() {
   }
 
   async function handleRemoveMember(m: MemberRow) {
-    if (!confirm(`Remove ${m.email} from this family? They will lose access immediately.`)) return;
     setLoadingAction(`remove-${m.user_id}`);
     const res = await fetch("/api/members", {
       method: "DELETE",
@@ -252,7 +253,7 @@ export default function SettingsPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleRemoveMember(m)}
+                          onClick={() => setConfirmRemove(m)}
                           disabled={busy}
                           title="Remove from family"
                           className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
@@ -356,6 +357,17 @@ export default function SettingsPage() {
         </section>
 
       </div>
+
+      <ConfirmModal
+        open={!!confirmRemove}
+        onClose={() => setConfirmRemove(null)}
+        onConfirm={() => { if (confirmRemove) handleRemoveMember(confirmRemove); setConfirmRemove(null); }}
+        title="Remove member"
+        description={`Remove ${confirmRemove?.email ?? ""} from this family? They will lose access immediately.`}
+        confirmLabel="Remove"
+        loading={loadingAction === `remove-${confirmRemove?.user_id}`}
+        variant="danger"
+      />
     </div>
   );
 }

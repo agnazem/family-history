@@ -11,6 +11,7 @@ import { AddMemoryModal } from "@/components/folio/AddMemoryModal";
 import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useFamily } from "@/lib/hooks/useFamily";
@@ -29,6 +30,8 @@ export default function PersonPage() {
   const { member: currentMember } = useFamily();
   const [person, setPerson] = useState<Person | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [familyPeople, setFamilyPeople] = useState<Person[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,8 +88,8 @@ export default function PersonPage() {
 
   async function handleDelete() {
     if (!person) return;
-    if (!confirm(`Permanently delete ${person.first_name} ${person.last_name}? This will also remove all their relationships and memories. This cannot be undone.`)) return;
     setDeleting(true);
+    setDeleteError(null);
     const res = await fetch("/api/people", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -94,7 +97,7 @@ export default function PersonPage() {
     });
     const data = await res.json();
     if (data.error) {
-      alert(data.error);
+      setDeleteError(data.error);
       setDeleting(false);
     } else {
       router.push("/tree");
@@ -185,7 +188,7 @@ export default function PersonPage() {
                   </button>
                   {currentMember?.role === "admin" && (
                     <button
-                      onClick={handleDelete}
+                      onClick={() => setShowDeleteConfirm(true)}
                       disabled={deleting}
                       title="Delete person"
                       className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
@@ -367,6 +370,18 @@ export default function PersonPage() {
           }}
         />
       )}
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+        onConfirm={handleDelete}
+        title="Delete person"
+        description={`Permanently delete ${fullName}? This will also remove all their relationships and memories. This cannot be undone.`}
+        confirmLabel="Delete"
+        loading={deleting}
+        error={deleteError}
+        variant="danger"
+      />
     </div>
   );
 }
