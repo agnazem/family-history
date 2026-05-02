@@ -21,7 +21,9 @@ export function AddPersonPanel({
 }: AddPersonPanelProps) {
   const [form, setForm] = useState({
     first_name: "",
+    middle_name: "",
     last_name: "",
+    nickname: "",
     dob: "",
     dod: "",
     bio: "",
@@ -45,7 +47,9 @@ export function AddPersonPanel({
     const { error } = await supabase.from("people").insert({
       family_id: familyId,
       first_name: form.first_name,
+      middle_name: form.middle_name || null,
       last_name: form.last_name,
+      nickname: form.nickname || null,
       dob: form.dob || null,
       dod: form.dod || null,
       bio: form.bio || null,
@@ -57,7 +61,7 @@ export function AddPersonPanel({
     if (error) {
       setError(error.message);
     } else {
-      setForm({ first_name: "", last_name: "", dob: "", dod: "", bio: "" });
+      setForm({ first_name: "", middle_name: "", last_name: "", nickname: "", dob: "", dod: "", bio: "" });
       onAdded();
       onClose();
     }
@@ -78,12 +82,32 @@ export function AddPersonPanel({
             />
           </div>
           <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Middle Name</label>
+            <input
+              value={form.middle_name}
+              onChange={(e) => set("middle_name", e.target.value)}
+              placeholder="Optional"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-300"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
             <input
               required
               value={form.last_name}
               onChange={(e) => set("last_name", e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Nickname / Known As</label>
+            <input
+              value={form.nickname}
+              onChange={(e) => set("nickname", e.target.value)}
+              placeholder="Optional"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-300"
             />
           </div>
         </div>
