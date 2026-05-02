@@ -79,7 +79,7 @@ export default function LandingPage() {
           <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
             <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
               <button
-                className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] ${
                   mode === "signin"
                     ? "bg-white shadow text-gray-900"
                     : "text-gray-500 hover:text-gray-700"
@@ -89,7 +89,7 @@ export default function LandingPage() {
                 Sign In
               </button>
               <button
-                className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] ${
                   mode === "signup"
                     ? "bg-white shadow text-gray-900"
                     : "text-gray-500 hover:text-gray-700"
