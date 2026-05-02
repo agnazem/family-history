@@ -16,3 +16,12 @@ else
   mkdir -p "$SKILLS_DIR"
   git clone --quiet https://github.com/garrytan/gstack.git "$GSTACK_DIR"
 fi
+
+# Symlink each gstack skill directly into ~/.claude/skills/ so they're
+# discoverable as individual slash commands
+for skill_dir in "$GSTACK_DIR"/*/; do
+  skill_name=$(basename "$skill_dir")
+  if [ -f "$skill_dir/SKILL.md" ] && [ ! -e "$SKILLS_DIR/$skill_name" ]; then
+    ln -s "$skill_dir" "$SKILLS_DIR/$skill_name"
+  fi
+done
