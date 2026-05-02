@@ -269,30 +269,30 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* Add existing user */}
+        {/* Invite form — primary action first */}
         <section className="bg-white rounded-2xl shadow-sm p-6 mb-4">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
-            <UserCheck className="w-4 h-4 text-blue-600" />
-            Add Existing Member
+            <UserPlus className="w-4 h-4 text-blue-600" />
+            Invite Someone
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            If someone already created an account but wasn&apos;t invited through the app, enter their email to add them directly.
+            They&apos;ll receive an email with a link to join {family.name} as a member.
           </p>
-          <form onSubmit={handleAddExisting} className="flex flex-col sm:flex-row gap-2">
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
-              value={addEmail}
-              onChange={(e) => setAddEmail(e.target.value)}
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
               required
-              placeholder="their@email.com"
+              placeholder="family@example.com"
               className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
-              disabled={adding}
+              disabled={inviting}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
-              {adding ? "Adding…" : "Add"}
+              {inviting ? "Sending…" : "Send Invite"}
             </button>
           </form>
         </section>
@@ -328,30 +328,30 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* Invite form */}
+        {/* Add existing user — edge-case flow, below primary */}
         <section className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
-            <UserPlus className="w-4 h-4 text-blue-600" />
-            Invite Someone
+            <UserCheck className="w-4 h-4 text-blue-600" />
+            Add Existing Member
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            They&apos;ll receive an email with a link to join {family.name} as a member.
+            If someone already created an account but wasn&apos;t invited through the app, enter their email to add them directly.
           </p>
-          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
+          <form onSubmit={handleAddExisting} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
               required
-              placeholder="family@example.com"
+              placeholder="their@email.com"
               className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
-              disabled={inviting}
+              disabled={adding}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
-              {inviting ? "Sending…" : "Send Invite"}
+              {adding ? "Adding…" : "Add"}
             </button>
           </form>
         </section>
