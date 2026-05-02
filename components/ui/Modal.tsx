@@ -40,7 +40,7 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-xl overflow-hidden`}
+        className={`relative w-full ${widths[size]} bg-white rounded-xl shadow-xl overflow-hidden`}
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
           <h2 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h2>

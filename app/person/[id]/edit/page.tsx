@@ -89,14 +89,14 @@ export default function EditPersonPage() {
 
   if (fetching) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-lg mx-auto px-4 py-8">
         <button
           onClick={() => router.back()}
@@ -106,8 +106,8 @@ export default function EditPersonPage() {
           Back
         </button>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h1 className="text-xl font-bold text-gray-900 mb-6">Edit Person</h1>
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h1 className="font-display text-2xl font-light text-stone-900 mb-6">Edit Person</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -117,7 +117,7 @@ export default function EditPersonPage() {
                   required
                   value={form.first_name}
                   onChange={(e) => set("first_name", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                 />
               </div>
               <div>
@@ -126,7 +126,7 @@ export default function EditPersonPage() {
                   required
                   value={form.last_name}
                   onChange={(e) => set("last_name", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                 />
               </div>
             </div>
@@ -137,7 +137,7 @@ export default function EditPersonPage() {
                   type="date"
                   value={form.dob}
                   onChange={(e) => set("dob", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                 />
               </div>
               <div>
@@ -146,7 +146,7 @@ export default function EditPersonPage() {
                   type="date"
                   value={form.dod}
                   onChange={(e) => set("dod", e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                 />
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function EditPersonPage() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-50 file:text-blue-600 hover:file:bg-blue-50"
+                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-canvas file:text-accent hover:file:bg-accent-pale"
               />
             </div>
             <div>
@@ -165,7 +165,7 @@ export default function EditPersonPage() {
                 value={form.bio}
                 onChange={(e) => set("bio", e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid resize-none"
               />
             </div>
             {error && (
@@ -182,7 +182,7 @@ export default function EditPersonPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 bg-accent text-white py-2 rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
               >
                 {loading ? "Saving…" : "Save Changes"}
               </button>

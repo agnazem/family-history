@@ -23,9 +23,9 @@ const TYPE_ICONS: Record<MemoryType, React.ElementType> = {
 
 const TYPE_COLORS: Record<MemoryType, string> = {
   audio: "bg-purple-50 text-purple-600",
-  photo: "bg-blue-50 text-blue-600",
+  photo: "bg-accent-pale text-accent",
   document: "bg-green-50 text-green-600",
-  note: "bg-slate-50 text-slate-600",
+  note: "bg-canvas text-slate-600",
 };
 
 function relativeTime(dateStr: string): string {
@@ -126,14 +126,14 @@ export default function ActivityPage() {
 
   if (familyLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-blue-600">Loading activity...</p>
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <p className="text-accent">Loading activity...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <button
           onClick={() => router.push("/tree")}
@@ -144,7 +144,7 @@ export default function ActivityPage() {
         </button>
 
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Activity</h1>
+          <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">Activity</h1>
           <p className="text-sm text-gray-500 mt-0.5">{family?.name} · last 50 memories</p>
         </div>
 

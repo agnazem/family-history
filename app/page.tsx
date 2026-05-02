@@ -47,16 +47,16 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-canvas flex flex-col">
       {/* Hero */}
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Left: branding */}
         <div className="lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-16">
           <div className="flex items-center gap-3 mb-8">
-            <BookOpen className="w-10 h-10 text-blue-600" />
-            <h1 className="text-3xl font-bold text-blue-900">Family History</h1>
+            <BookOpen className="w-10 h-10 text-accent" />
+            <h1 className="font-display text-4xl font-light text-stone-900 tracking-tight">Family History</h1>
           </div>
-          <p className="text-xl text-blue-700 mb-8 leading-relaxed">
+          <p className="text-xl text-stone-600 mb-8 leading-relaxed">
             Collaboratively build your family tree and preserve the stories,
             voices, and memories of the people who shaped your family.
           </p>
@@ -66,7 +66,7 @@ export default function LandingPage() {
               { icon: Mic, text: "Record audio stories and memories" },
               { icon: Image, text: "Preserve photos and family artifacts" },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3 text-blue-600">
+              <div key={text} className="flex items-center gap-3 text-stone-600">
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 <span>{text}</span>
               </div>
@@ -76,7 +76,7 @@ export default function LandingPage() {
 
         {/* Right: auth form */}
         <div className="lg:w-1/2 flex items-center justify-center px-8 py-16">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
             <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
               <button
                 className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -111,7 +111,7 @@ export default function LandingPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                     placeholder="Jane Smith"
                   />
                 </div>
@@ -125,7 +125,7 @@ export default function LandingPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                   placeholder="you@example.com"
                 />
               </div>
@@ -139,7 +139,7 @@ export default function LandingPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                   placeholder="••••••••"
                 />
               </div>
@@ -158,7 +158,7 @@ export default function LandingPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="w-full bg-accent hover:bg-accent-hover text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 {loading
                   ? "..."

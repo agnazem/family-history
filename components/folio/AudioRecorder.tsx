@@ -141,7 +141,7 @@ export function AudioRecorder({ onRecorded, onClear, recorded }: AudioRecorderPr
           <button
             type="button"
             onClick={startRecording}
-            className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700"
+            className="w-11 h-11 rounded-full bg-accent text-white flex items-center justify-center hover:bg-accent-hover"
           >
             <Mic className="w-4 h-4" />
           </button>

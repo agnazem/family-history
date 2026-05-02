@@ -9,9 +9,9 @@ export type PersonNodeData = Person & { onClick: (id: string) => void; memoryTyp
 
 const MEMORY_ICONS: Record<MemoryType, { Icon: React.ElementType; className: string }> = {
   audio:    { Icon: Mic,       className: "text-purple-500" },
-  photo:    { Icon: ImageIcon, className: "text-blue-500" },
+  photo:    { Icon: ImageIcon, className: "text-accent-mid" },
   document: { Icon: FileText,  className: "text-green-600" },
-  note:     { Icon: PenLine,   className: "text-slate-500" },
+  note:     { Icon: PenLine,   className: "text-stone-400" },
 };
 
 export function PersonNode({ data }: NodeProps) {
@@ -38,20 +38,20 @@ export function PersonNode({ data }: NodeProps) {
 
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!bg-blue-400" />
+      <Handle type="target" position={Position.Top} className="!bg-accent-mid" />
       <div
         onClick={() => person.onClick(person.id)}
-        className={`w-40 bg-white rounded-xl shadow-md border-2 p-3 cursor-pointer hover:shadow-lg hover:border-blue-400 transition-all select-none ${
-          isDeceased ? "border-gray-300" : "border-blue-200"
+        className={`w-40 bg-white rounded-xl shadow-md border-2 p-3 cursor-pointer hover:shadow-lg hover:border-accent-mid transition-all select-none ${
+          isDeceased ? "border-gray-300" : "border-accent-border"
         }`}
       >
         <div className="flex flex-col items-center gap-2">
           <Avatar src={person.profile_photo_url} name={fullName} size="lg" />
           <div className="text-center w-full">
-            <p className={`text-sm font-semibold leading-tight line-clamp-2 h-9 overflow-hidden ${isDeceased ? "text-gray-500" : "text-gray-900"}`}>
+            <p className={`font-display text-sm font-normal leading-tight line-clamp-2 h-9 overflow-hidden ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
               {fullName}
             </p>
-            <p className="text-xs text-gray-400 mt-0.5 h-4 truncate">
+            <p className="text-xs text-stone-400 mt-0.5 h-4 truncate">
               {dates ?? ""}
             </p>
           </div>
@@ -71,12 +71,12 @@ export function PersonNode({ data }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-blue-400"
+        className="!bg-accent-mid"
       />
-      <Handle type="source" position={Position.Right} id="right" className="!bg-blue-300" />
-      <Handle type="target" position={Position.Right} id="right-in" className="!bg-blue-300" />
-      <Handle type="source" position={Position.Left} id="left-out" className="!bg-blue-300" />
-      <Handle type="target" position={Position.Left} id="left" className="!bg-blue-300" />
+      <Handle type="source" position={Position.Right} id="right" className="!bg-accent-mid" />
+      <Handle type="target" position={Position.Right} id="right-in" className="!bg-accent-mid" />
+      <Handle type="source" position={Position.Left} id="left-out" className="!bg-accent-mid" />
+      <Handle type="target" position={Position.Left} id="left" className="!bg-accent-mid" />
     </>
   );
 }

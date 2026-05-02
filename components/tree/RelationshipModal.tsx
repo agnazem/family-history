@@ -76,14 +76,14 @@ export function RelationshipModal({
   return (
     <Modal open={!!relationship} onClose={onClose} title="Relationship" size="sm">
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3 bg-slate-50 rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between gap-3 bg-canvas rounded-xl px-4 py-3">
           <div className="text-center flex-1">
             <p className="text-xs text-gray-500 mb-0.5">Person A</p>
             <p className="font-medium text-gray-900 text-sm">
               {personA ? `${personA.first_name} ${personA.last_name}` : "Unknown"}
             </p>
           </div>
-          <div className="text-blue-500 text-lg">↔</div>
+          <div className="text-accent-mid text-lg">↔</div>
           <div className="text-center flex-1">
             <p className="text-xs text-gray-500 mb-0.5">Person B</p>
             <p className="font-medium text-gray-900 text-sm">
@@ -99,7 +99,7 @@ export function RelationshipModal({
           <select
             value={type}
             onChange={(e) => setType(e.target.value as RelationshipType)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
           >
             {Object.entries(RELATIONSHIP_LABELS).map(([val, label]) => (
               <option key={val} value={val}>
@@ -112,7 +112,7 @@ export function RelationshipModal({
         {otherPerson && (
           <button
             onClick={() => onViewPerson!(otherPerson.id)}
-            className="w-full flex items-center justify-center gap-1.5 border border-blue-200 text-blue-600 hover:bg-blue-50 py-2 rounded-lg text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 border border-accent-border text-accent hover:bg-accent-pale py-2 rounded-lg text-sm transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             View {otherPerson.first_name}&apos;s Profile
@@ -137,7 +137,7 @@ export function RelationshipModal({
           <button
             onClick={handleSave}
             disabled={loading || type === relationship.type}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+            className="flex-1 bg-accent text-white py-2 rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save"}
           </button>

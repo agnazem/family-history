@@ -21,9 +21,9 @@ const TYPE_ICONS = {
 
 const TYPE_COLORS = {
   audio: "bg-purple-50 border-purple-200 text-purple-700",
-  photo: "bg-blue-50 border-blue-200 text-blue-700",
+  photo: "bg-accent-pale border-accent-border text-accent",
   document: "bg-green-50 border-green-200 text-green-700",
-  note: "bg-slate-50 border-blue-200 text-blue-600",
+  note: "bg-canvas border-accent-border text-accent",
 };
 
 type TimelineEntry = Memory & { taggedPeople: Person[] };
@@ -126,8 +126,8 @@ export default function TimelinePage() {
 
   if (familyLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-blue-600">Loading timeline...</p>
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <p className="text-accent">Loading timeline...</p>
       </div>
     );
   }
@@ -135,7 +135,7 @@ export default function TimelinePage() {
   const grouped = groupByYear(entries);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <button
           onClick={() => router.push("/tree")}
@@ -146,7 +146,7 @@ export default function TimelinePage() {
         </button>
 
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Timeline</h1>
+          <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">Timeline</h1>
           <p className="text-sm text-gray-500 mt-0.5">{family?.name}</p>
         </div>
 
@@ -160,7 +160,7 @@ export default function TimelinePage() {
             {grouped.map(([year, items]) => (
               <section key={year}>
                 <div className="flex items-center gap-3 mb-4">
-                  <span className={`text-lg font-bold ${year === "unknown" ? "text-gray-400 italic" : "text-gray-900"}`}>
+                  <span className={`font-display text-xl font-normal ${year === "unknown" ? "text-stone-400 italic" : "text-stone-800"}`}>
                     {year === "unknown" ? "Date unknown" : year}
                   </span>
                   <div className="flex-1 h-px bg-gray-200" />

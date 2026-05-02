@@ -14,10 +14,10 @@ const TYPE_ICONS = {
 };
 
 const TYPE_COLORS = {
-  audio: "bg-purple-50 border-purple-200 text-purple-700",
-  photo: "bg-blue-50 border-blue-200 text-blue-700",
+  audio:    "bg-purple-50 border-purple-200 text-purple-700",
+  photo:    "bg-teal-50 border-teal-200 text-teal-700",
   document: "bg-green-50 border-green-200 text-green-700",
-  note: "bg-slate-50 border-blue-200 text-blue-600",
+  note:     "bg-stone-50 border-stone-200 text-stone-600",
 };
 
 interface MemoryCardProps {
