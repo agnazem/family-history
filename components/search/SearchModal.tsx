@@ -121,7 +121,7 @@ export function SearchModal({
       />
 
       {/* Panel */}
-      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl overflow-hidden">
         {/* Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
           <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
@@ -169,7 +169,7 @@ export function SearchModal({
                 <button
                   key={p.id}
                   onClick={() => { onPersonClick(p.id); onClose(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-canvas transition-colors text-left"
                 >
                   <Avatar
                     src={p.profile_photo_url}
@@ -206,7 +206,7 @@ export function SearchModal({
                       if (person) onPersonClick(person.id);
                       onClose();
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-canvas transition-colors text-left"
                   >
                     {/* Thumbnail for photos, icon for everything else */}
                     {m.type === "photo" && m.storage_url ? (

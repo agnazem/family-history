@@ -53,11 +53,11 @@ export default function NewFamilyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
         <div className="flex items-center gap-3 mb-6">
-          <BookOpen className="w-8 h-8 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Name Your Family</h1>
+          <BookOpen className="w-8 h-8 text-accent" />
+          <h1 className="font-display text-2xl font-light text-stone-900">Name Your Family</h1>
         </div>
         <p className="text-gray-600 mb-6">
           Give your family history a name. You can invite other family members
@@ -73,7 +73,7 @@ export default function NewFamilyPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
               placeholder="The Smith Family"
             />
           </div>
@@ -85,7 +85,7 @@ export default function NewFamilyPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+            className="w-full bg-accent hover:bg-accent-hover text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create Family History"}
           </button>

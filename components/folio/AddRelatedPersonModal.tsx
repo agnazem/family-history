@@ -138,7 +138,7 @@ export function AddRelatedPersonModal({
               required
               value={form.first_name}
               onChange={(e) => field("first_name", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
           </div>
           <div>
@@ -147,7 +147,7 @@ export function AddRelatedPersonModal({
               required
               value={form.last_name}
               onChange={(e) => field("last_name", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
           </div>
         </div>
@@ -158,7 +158,7 @@ export function AddRelatedPersonModal({
             <select
               value={otherParentId}
               onChange={(e) => setOtherParentId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid bg-white"
             >
               <option value="">— none —</option>
               {otherPeople.map((p) => (
@@ -177,7 +177,7 @@ export function AddRelatedPersonModal({
               type="date"
               value={form.dob}
               onChange={(e) => field("dob", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
           </div>
           <div>
@@ -186,7 +186,7 @@ export function AddRelatedPersonModal({
               type="date"
               value={form.dod}
               onChange={(e) => field("dod", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
           </div>
         </div>
@@ -196,7 +196,7 @@ export function AddRelatedPersonModal({
             value={form.bio}
             onChange={(e) => field("bio", e.target.value)}
             rows={2}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid resize-none"
           />
         </div>
         {error && (
@@ -208,7 +208,7 @@ export function AddRelatedPersonModal({
             Cancel
           </button>
           <button type="submit" disabled={loading}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+            className="flex-1 bg-accent text-white py-2 rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50">
             {loading ? "Creating..." : TITLE[intent]}
           </button>
         </div>

@@ -9,6 +9,7 @@ import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity, MousePointer2 } from "lucide-react";
 import { SearchModal } from "@/components/search/SearchModal";
+import { Spinner } from "@/components/ui/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { computeLayout } from "@/lib/layout";
 import type { MemoryType } from "@/types";
@@ -93,17 +94,17 @@ export default function TreePage() {
 
   if (familyLoading || peopleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-blue-600">Loading your family tree...</p>
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
+        <Spinner />
       </div>
     );
   }
 
   if (!family) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
         <div className="text-center">
-          <BookOpen className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+          <BookOpen className="w-12 h-12 text-accent mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             No family found
           </h2>
@@ -112,7 +113,7 @@ export default function TreePage() {
           </p>
           <button
             onClick={() => router.push("/family/new")}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
+            className="bg-accent hover:bg-accent-hover text-white px-6 py-2 rounded-lg font-medium"
           >
             Create a Family History
           </button>
@@ -122,12 +123,12 @@ export default function TreePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col bg-canvas">
       {/* Toolbar */}
-      <header className="flex items-center justify-between px-3 py-2 bg-white border-b border-blue-100 shadow-sm z-10 gap-2">
+      <header className="flex items-center justify-between px-3 py-2 bg-white border-b border-accent-border shadow-sm z-10 gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-          <BookOpen className="w-5 h-5 text-blue-600 flex-shrink-0" />
-          <span className="font-semibold text-gray-900 truncate text-sm sm:text-base">{family.name}</span>
+          <BookOpen className="w-5 h-5 text-accent flex-shrink-0" />
+          <span className="font-display font-normal text-stone-900 truncate text-sm sm:text-base">{family.name}</span>
         </div>
         <div className="flex items-center gap-1">
           {/* View nav group */}
@@ -164,7 +165,7 @@ export default function TreePage() {
             onClick={() => setSelectMode((s) => !s)}
             className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] ${
               selectMode
-                ? "bg-blue-100 border-blue-400 text-blue-700"
+                ? "bg-accent-pale border-accent-mid text-accent"
                 : "border-gray-300 text-gray-600 hover:bg-gray-50"
             }`}
             title={selectMode ? "Switch to pan mode" : "Switch to select mode"}
@@ -188,7 +189,8 @@ export default function TreePage() {
           {/* Primary actions group */}
           <button
             onClick={() => setShowAddPerson(true)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
+            className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
+            title="Add Person"
           >
             <UserPlus className="w-4 h-4 flex-shrink-0" />
             <span className="hidden sm:inline">Add Person</span>
@@ -196,7 +198,8 @@ export default function TreePage() {
           <button
             onClick={() => setShowAddRelationship(true)}
             disabled={people.length < 2}
-            className="hidden sm:flex items-center gap-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
+            className="hidden sm:flex items-center gap-1.5 border border-accent text-accent hover:bg-accent-pale text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
+            title="Add Relationship"
           >
             <GitMerge className="w-4 h-4 flex-shrink-0" />
             <span className="hidden md:inline">Add Relationship</span>
@@ -226,7 +229,7 @@ export default function TreePage() {
 
       {/* Welcome / invite nudge */}
       {showWelcomeBanner && member?.role === "admin" && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-600 text-white text-sm">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-accent text-white text-sm">
           <Users className="w-4 h-4 flex-shrink-0" />
           <span className="flex-1">
             Welcome! Invite family members so they can add memories and help grow the tree.
@@ -253,7 +256,7 @@ export default function TreePage() {
               </p>
               <button
                 onClick={() => setShowAddPerson(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
+                className="bg-accent hover:bg-accent-hover text-white px-6 py-2 rounded-lg font-medium"
               >
                 Add First Person
               </button>

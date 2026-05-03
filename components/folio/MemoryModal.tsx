@@ -199,7 +199,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-base font-semibold border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full text-base font-semibold border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
           ) : (
             <p className="text-base font-semibold text-gray-900">{memory.title}</p>
@@ -209,7 +209,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
 
         {/* Media */}
         {memory.type === "audio" && memory.storage_url && (
-          <div className="w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 text-blue-700">
+          <div className="w-full bg-accent-pale border border-accent-border rounded-xl px-4 py-2 text-accent">
             <AudioPlayer src={memory.storage_url} />
           </div>
         )}
@@ -231,7 +231,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
             href={memory.storage_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+            className="flex items-center gap-2 w-full bg-accent-pale border border-accent-border rounded-xl px-4 py-3 text-sm font-medium text-accent hover:bg-accent-pale transition-colors"
           >
             <Download className="w-4 h-4" />
             Download file
@@ -246,7 +246,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Add a caption or description..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid resize-none"
             />
           ) : memory.description ? (
             <p className="text-sm text-gray-600 leading-relaxed">{memory.description}</p>
@@ -263,7 +263,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
               type="date"
               value={dateOfMemory}
               onChange={(e) => setDateOfMemory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
           </div>
         ) : memory.date_of_memory ? (
@@ -290,8 +290,8 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
                       onClick={() => toggleTag(p.id)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
                         selected
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : "border-gray-300 text-gray-600 hover:border-blue-400"
+                          ? "bg-accent border-accent text-white"
+                          : "border-gray-300 text-gray-600 hover:border-accent-mid"
                       }`}
                     >
                       {selected && <Check className="w-3 h-3" />}
@@ -322,7 +322,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
             <button
               onClick={handleSave}
               disabled={saving || !title.trim()}
-              className="flex items-center gap-1.5 flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 justify-center"
+              className="flex items-center gap-1.5 flex-1 bg-accent text-white py-2 rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50 justify-center"
             >
               <Check className="w-4 h-4" />
               {saving ? "Saving..." : "Save"}
@@ -345,7 +345,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
             </button>
             <button
               onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 justify-center"
+              className="flex items-center gap-1.5 flex-1 bg-accent text-white py-2 rounded-lg text-sm hover:bg-accent-hover justify-center"
             >
               <Pencil className="w-4 h-4" />
               Edit
@@ -385,7 +385,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
               maxLength={1000}
               rows={2}
               placeholder="Add a comment..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid resize-none"
             />
             <div className="flex items-center justify-between">
               <span className={`text-xs ${commentText.length > 900 ? "text-orange-500" : "text-gray-400"}`}>
@@ -394,7 +394,7 @@ export function MemoryModal({ memory, familyPeople, onClose, onChanged }: Memory
               <button
                 onClick={handleAddComment}
                 disabled={submittingComment || !commentText.trim()}
-                className="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 text-sm bg-accent text-white px-3 py-1.5 rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors"
               >
                 <Send className="w-3.5 h-3.5" />
                 {submittingComment ? "Posting..." : "Post"}

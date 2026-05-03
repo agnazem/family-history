@@ -139,7 +139,7 @@ export function AddMemoryModal({
               onClick={() => { setMemType(type); setAudioBlob(null); setFile(null); }}
               className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs font-medium transition-colors ${
                 memType === type
-                  ? "bg-slate-50 border-blue-500 text-blue-700"
+                  ? "bg-canvas border-accent-mid text-accent"
                   : "border-gray-200 text-gray-500 hover:border-gray-300"
               }`}
             >
@@ -155,7 +155,7 @@ export function AddMemoryModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             placeholder={
               memType === "audio" ? "e.g. Grandma's childhood story" :
               memType === "photo" ? "e.g. Summer 1965" :
@@ -183,7 +183,7 @@ export function AddMemoryModal({
               required
               accept={memType === "photo" ? "image/*" : undefined}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-50 file:text-blue-600 hover:file:bg-blue-50"
+              className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-canvas file:text-accent hover:file:bg-accent-pale"
             />
           </div>
         )}
@@ -197,7 +197,7 @@ export function AddMemoryModal({
             onChange={(e) => setDescription(e.target.value)}
             required={memType === "note"}
             rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid resize-none"
             placeholder={memType === "note" ? "Write your memory here..." : "Optional context or caption..."}
           />
         </div>
@@ -218,8 +218,8 @@ export function AddMemoryModal({
                     onClick={() => toggleTag(p.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
                       selected
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "border-gray-300 text-gray-600 hover:border-blue-400"
+                        ? "bg-accent border-accent text-white"
+                        : "border-gray-300 text-gray-600 hover:border-accent-mid"
                     }`}
                   >
                     {selected && <Check className="w-3 h-3" />}
@@ -246,7 +246,7 @@ export function AddMemoryModal({
           <button
             type="submit"
             disabled={loading || !isValid}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+            className="flex-1 bg-accent text-white py-2 rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save Memory"}
           </button>

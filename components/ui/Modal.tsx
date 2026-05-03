@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -12,11 +12,17 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, size = "md" }: ModalProps) {
+  const titleId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
-    if (open) document.addEventListener("keydown", onKey);
+    if (open) {
+      document.addEventListener("keydown", onKey);
+      closeRef.current?.focus();
+    }
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
@@ -31,13 +37,18 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-xl overflow-hidden`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`relative w-full ${widths[size]} bg-white rounded-xl shadow-xl overflow-hidden`}
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
+            ref={closeRef}
             onClick={onClose}
             className="p-1 -mr-1 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>

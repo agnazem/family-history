@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   ArrowLeft, UserPlus, Mail, Crown, Users, Trash2,
   ShieldCheck, ShieldOff, X, CheckCircle, AlertCircle, UserCheck,
@@ -30,11 +31,15 @@ export default function SettingsPage() {
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [flash, setFlash] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [flashVisible, setFlashVisible] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<MemberRow | null>(null);
   const supabase = createClient();
 
   function showFlash(type: "success" | "error", msg: string) {
     setFlash({ type, msg });
+    setFlashVisible(true);
+    setTimeout(() => setFlashVisible(false), 3500);
     setTimeout(() => setFlash(null), 4000);
   }
 
@@ -123,7 +128,6 @@ export default function SettingsPage() {
   }
 
   async function handleRemoveMember(m: MemberRow) {
-    if (!confirm(`Remove ${m.email} from this family? They will lose access immediately.`)) return;
     setLoadingAction(`remove-${m.user_id}`);
     const res = await fetch("/api/members", {
       method: "DELETE",
@@ -138,7 +142,7 @@ export default function SettingsPage() {
 
   if (!family || currentMember?.role !== "admin") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
         <p className="text-gray-500">Access denied.</p>
       </div>
     );
@@ -147,7 +151,7 @@ export default function SettingsPage() {
   const adminCount = members.filter((m) => m.role === "admin").length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-2xl mx-auto px-4 py-8">
 
         {/* Header */}
@@ -160,13 +164,15 @@ export default function SettingsPage() {
         </button>
 
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">{family.name}</h1>
+          <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">{family.name}</h1>
           <p className="text-sm text-gray-500 mt-0.5">Admin panel</p>
         </div>
 
         {/* Flash message */}
         {flash && (
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm font-medium ${
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm font-medium transition-opacity duration-500 ${
+            flashVisible ? "opacity-100" : "opacity-0"
+          } ${
             flash.type === "success"
               ? "bg-green-50 text-green-700 border border-green-200"
               : "bg-red-50 text-red-700 border border-red-200"
@@ -179,15 +185,15 @@ export default function SettingsPage() {
         )}
 
         {/* Members */}
-        <section className="bg-white rounded-2xl shadow-sm mb-4 overflow-hidden">
+        <section className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-600" />
+            <Users className="w-4 h-4 text-accent" />
             <h2 className="font-semibold text-gray-900">Members</h2>
             <span className="ml-auto text-xs text-gray-400">{members.length} total</span>
           </div>
 
-          <div className="px-6 py-2 bg-slate-50 border-b border-gray-100 flex gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><Crown className="w-3 h-3 text-blue-500" /> <strong>Admin</strong> — invite &amp; manage members, access this panel</span>
+          <div className="px-6 py-2 bg-canvas border-b border-gray-100 flex gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1"><Crown className="w-3 h-3 text-accent-mid" /> <strong>Admin</strong> — invite &amp; manage members, access this panel</span>
             <span className="flex items-center gap-1"><Users className="w-3 h-3 text-gray-400" /> <strong>Member</strong> — view &amp; contribute to the family tree</span>
           </div>
 
@@ -202,8 +208,8 @@ export default function SettingsPage() {
 
                 return (
                   <li key={m.id} className="px-6 py-4 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-semibold text-blue-600">
+                    <div className="w-9 h-9 rounded-full bg-accent-pale flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-semibold text-accent">
                         {(m.full_name ?? m.email).charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -219,7 +225,7 @@ export default function SettingsPage() {
                     </div>
 
                     {m.role === "admin" ? (
-                      <span className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex-shrink-0">
+                      <span className="flex items-center gap-1 text-xs font-medium text-accent bg-accent-pale border border-accent-border px-2 py-0.5 rounded-full flex-shrink-0">
                         <Crown className="w-3 h-3" /> Admin
                       </span>
                     ) : (
@@ -235,7 +241,7 @@ export default function SettingsPage() {
                             onClick={() => handleChangeRole(m, "admin")}
                             disabled={busy}
                             title="Make admin"
-                            className="flex items-center gap-1 text-xs p-1.5 sm:px-2 sm:py-1 text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 text-xs p-1.5 sm:px-2 sm:py-1 text-accent hover:bg-accent-pale border border-accent-border rounded-lg transition-colors disabled:opacity-40"
                           >
                             <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
                             <span className="hidden sm:inline">Make admin</span>
@@ -252,7 +258,7 @@ export default function SettingsPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => handleRemoveMember(m)}
+                          onClick={() => setConfirmRemove(m)}
                           disabled={busy}
                           title="Remove from family"
                           className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
@@ -268,39 +274,39 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* Add existing user */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+        {/* Invite form — primary action first */}
+        <section className="bg-white rounded-xl shadow-sm p-6 mb-4">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
-            <UserCheck className="w-4 h-4 text-blue-600" />
-            Add Existing Member
+            <UserPlus className="w-4 h-4 text-accent" />
+            Invite Someone
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            If someone already created an account but wasn&apos;t invited through the app, enter their email to add them directly.
+            They&apos;ll receive an email with a link to join {family.name} as a member.
           </p>
-          <form onSubmit={handleAddExisting} className="flex flex-col sm:flex-row gap-2">
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
-              value={addEmail}
-              onChange={(e) => setAddEmail(e.target.value)}
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
               required
-              placeholder="their@email.com"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="family@example.com"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
             <button
               type="submit"
-              disabled={adding}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
+              disabled={inviting}
+              className="bg-accent hover:bg-accent-hover text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
-              {adding ? "Adding…" : "Add"}
+              {inviting ? "Sending…" : "Send Invite"}
             </button>
           </form>
         </section>
 
         {/* Pending invitations */}
         {invitations.length > 0 && (
-          <section className="bg-white rounded-2xl shadow-sm mb-4 overflow-hidden">
+          <section className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-blue-600" />
+              <Mail className="w-4 h-4 text-accent" />
               <h2 className="font-semibold text-gray-900">Pending Invitations</h2>
               <span className="ml-auto text-xs text-gray-400">{invitations.length}</span>
             </div>
@@ -327,35 +333,46 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* Invite form */}
-        <section className="bg-white rounded-2xl shadow-sm p-6">
+        {/* Add existing user — edge-case flow, below primary */}
+        <section className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
-            <UserPlus className="w-4 h-4 text-blue-600" />
-            Invite Someone
+            <UserCheck className="w-4 h-4 text-accent" />
+            Add Existing Member
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            They&apos;ll receive an email with a link to join {family.name} as a member.
+            If someone already created an account but wasn&apos;t invited through the app, enter their email to add them directly.
           </p>
-          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
+          <form onSubmit={handleAddExisting} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
               required
-              placeholder="family@example.com"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="their@email.com"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
             />
             <button
               type="submit"
-              disabled={inviting}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
+              disabled={adding}
+              className="bg-accent hover:bg-accent-hover text-white text-sm px-5 py-2.5 rounded-lg disabled:opacity-50 font-medium"
             >
-              {inviting ? "Sending…" : "Send Invite"}
+              {adding ? "Adding…" : "Add"}
             </button>
           </form>
         </section>
 
       </div>
+
+      <ConfirmModal
+        open={!!confirmRemove}
+        onClose={() => setConfirmRemove(null)}
+        onConfirm={() => { if (confirmRemove) handleRemoveMember(confirmRemove); setConfirmRemove(null); }}
+        title="Remove member"
+        description={`Remove ${confirmRemove?.email ?? ""} from this family? They will lose access immediately.`}
+        confirmLabel="Remove"
+        loading={loadingAction === `remove-${confirmRemove?.user_id}`}
+        variant="danger"
+      />
     </div>
   );
 }
