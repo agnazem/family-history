@@ -32,6 +32,7 @@ export interface Person {
   dob: string | null;
   dod: string | null;
   bio: string | null;
+  ai_summary: string | null;
   profile_photo_url: string | null;
   canvas_x: number;
   canvas_y: number;

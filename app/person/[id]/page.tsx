@@ -8,12 +8,14 @@ import { Avatar } from "@/components/ui/Avatar";
 import { MemoryCard } from "@/components/folio/MemoryCard";
 import { MemoryModal } from "@/components/folio/MemoryModal";
 import { AddMemoryModal } from "@/components/folio/AddMemoryModal";
+import { PersonSummary } from "@/components/folio/PersonSummary";
+import { TellMeModal } from "@/components/folio/TellMeModal";
 import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2, Mic } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useFamily } from "@/lib/hooks/useFamily";
 import type { Person, Relationship } from "@/types";
@@ -42,6 +44,8 @@ export default function PersonPage() {
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<import("@/types").Memory | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showTellMe, setShowTellMe] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -80,6 +84,7 @@ export default function PersonPage() {
       const { data } = await supabase.from("people").select("*").eq("id", id).single();
       if (data) {
         setPerson(data);
+        setAiSummary(data.ai_summary ?? null);
         await loadRelationships(data.family_id);
       }
       setLoading(false);
@@ -186,6 +191,14 @@ export default function PersonPage() {
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
+                    onClick={() => setShowTellMe(true)}
+                    className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover border border-accent-border hover:border-accent-mid bg-accent-pale px-3 py-1.5 rounded-lg transition-colors"
+                    title="Tell me about this person"
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Tell me about</span>
+                  </button>
+                  <button
                     onClick={() => router.push(`/person/${id}/edit`)}
                     className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-accent border border-gray-300 hover:border-accent-mid px-3 py-1.5 rounded-lg transition-colors"
                   >
@@ -218,6 +231,19 @@ export default function PersonPage() {
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+        {/* AI Summary */}
+        <PersonSummary
+          personId={id}
+          personName={fullName}
+          firstName={person.first_name}
+          dob={person.dob}
+          dod={person.dod}
+          bio={person.bio}
+          initialSummary={aiSummary}
+          memories={memories}
+          onSummaryChange={setAiSummary}
+        />
+
         {/* Relationships */}
         <section>
           <div className="mb-3">
@@ -376,6 +402,17 @@ export default function PersonPage() {
           }}
         />
       )}
+
+      <TellMeModal
+        open={showTellMe}
+        onClose={() => setShowTellMe(false)}
+        person={person}
+        familyPeople={familyPeople}
+        onComplete={() => {
+          refetchMemories();
+          loadRelationships(person.family_id);
+        }}
+      />
 
       <ConfirmModal
         open={showDeleteConfirm}
