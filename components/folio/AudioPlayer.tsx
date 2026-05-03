@@ -13,9 +13,10 @@ function fmt(secs: number): string {
 interface AudioPlayerProps {
   src: string;
   className?: string;
+  playbackRate?: number;
 }
 
-export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
+export function AudioPlayer({ src, className = "", playbackRate = 1 }: AudioPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(NaN);
@@ -36,6 +37,7 @@ export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
       }
     }
 
+    audio.playbackRate = playbackRate;
     audio.onloadedmetadata = resolveInfiniteDuration;
     audio.ondurationchange = () => {
       if (isFinite(audio.duration) && audio.duration > 0) {
@@ -71,6 +73,10 @@ export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
     if (!audio) return;
     audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + delta));
   }
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
 
   const progress = isNaN(duration) || duration === 0 ? 0 : currentTime / duration;
 

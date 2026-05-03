@@ -3,17 +3,18 @@ import Image from "next/image";
 interface AvatarProps {
   src: string | null;
   name: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 const sizes = {
+  xs: "w-6 h-6 text-[10px]",
   sm: "w-8 h-8 text-xs",
   md: "w-10 h-10 text-sm",
   lg: "w-16 h-16 text-xl",
   xl: "w-24 h-24 text-3xl",
 };
 
-const pxSizes = { sm: 32, md: 40, lg: 64, xl: 96 };
+const pxSizes = { xs: 24, sm: 32, md: 40, lg: 64, xl: 96 };
 
 export function Avatar({ src, name, size = "md" }: AvatarProps) {
   const initials = name

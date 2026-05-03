@@ -2,6 +2,8 @@ export type UserRole = "admin" | "member";
 export type RelationshipType = "parent_child" | "spouse" | "sibling";
 export type MemoryType = "audio" | "photo" | "document" | "note";
 export type InvitationStatus = "pending" | "accepted";
+export type TranscriptStatus = "none" | "pending" | "streaming" | "finalizing" | "ready" | "failed";
+export type MemoryPersonRole = "subject" | "mentioned" | "narrator";
 
 export interface Family {
   id: string;
@@ -55,9 +57,16 @@ export interface Memory {
   title: string;
   description: string | null;
   storage_url: string | null;
+  audio_mp3_url: string | null;
   recorded_by: string;
   date_of_memory: string | null;
   created_at: string;
+  transcript: string | null;
+  transcript_draft: string | null;
+  duration_sec: number | null;
+  recorded_at: string | null;
+  recorded_at_note: string | null;
+  transcript_status: TranscriptStatus;
   recorder?: {
     email: string;
     user_metadata: { full_name?: string };
@@ -69,6 +78,17 @@ export interface MemoryPerson {
   memory_id: string;
   person_id: string;
   family_id: string;
+  role: MemoryPersonRole;
+}
+
+export interface MemoryComment {
+  id: string;
+  memory_id: string;
+  family_id: string;
+  user_id: string;
+  text: string;
+  parent_id: string | null;
+  created_at: string;
 }
 
 export interface Invitation {

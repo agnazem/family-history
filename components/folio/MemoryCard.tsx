@@ -1,10 +1,11 @@
 "use client";
 
-import { Mic, Image as ImageIcon, FileText, PenLine, Download, Users } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, PenLine, Download, Users, ExternalLink } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import type { Memory, Person } from "@/types";
 import Image from "next/image";
+import Link from "next/link";
 
 const TYPE_ICONS = {
   audio:    Mic,
@@ -44,6 +45,14 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
             {memory.title}
           </p>
           <p className="body-sm mt-1">{formatDate(memory.created_at)}</p>
+          <Link
+            href={`/memory/${memory.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.04em] text-[--ink-mute] hover:text-[--accent] transition-colors mt-0.5"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Open
+          </Link>
 
           {memory.type === "audio" && memory.storage_url && (
             <AudioPlayer src={memory.storage_url} className="mt-3" />
