@@ -11,6 +11,7 @@
   --ink-mute:      #8A7E69;
   --rule:          #E0D2BB;
   --accent:        #8B5E3C;
+  --accent-hover:  #7A5234;
   --accent-soft:   #F0E1CD;
   --gold:          #C2874F;
 
@@ -57,7 +58,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--ink-soft);
   font-weight: 500;
 }
 
@@ -69,7 +70,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-mono);
   font-size: 13px;
   letter-spacing: 0.02em;
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .rule {

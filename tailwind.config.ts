@@ -21,7 +21,7 @@ const config: Config = {
         gold:          "var(--gold)",
         accent: {
           DEFAULT: "var(--accent)",
-          hover:   "#7A5234",
+          hover:   "var(--accent-hover)",
           mid:     "var(--gold)",
           pale:    "var(--accent-soft)",
           border:  "var(--rule)",

@@ -121,7 +121,7 @@ export default function PersonPage() {
   if (!person) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <p className="text-gray-500">Person not found.</p>
+        <p className="text-[--ink-mute]">Person not found.</p>
       </div>
     );
   }
@@ -153,7 +153,7 @@ export default function PersonPage() {
         <div className="max-w-2xl mx-auto px-4 py-6">
           <button
             onClick={() => router.push("/tree")}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4"
+            className="flex items-center gap-1.5 text-sm text-[--ink-mute] hover:text-[--ink-soft] mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to tree
@@ -184,7 +184,7 @@ export default function PersonPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h1 className="font-display text-[56px] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">{fullName}</h1>
+                  <h1 className="font-display text-[clamp(28px,7vw,56px)] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">{fullName}</h1>
                   {person.nickname && (
                     <p className="text-sm text-[--ink-mute] mt-0.5">Known as &ldquo;<span className="italic-flourish">{person.nickname}</span>&rdquo;</p>
                   )}
@@ -200,7 +200,7 @@ export default function PersonPage() {
                   </button>
                   <button
                     onClick={() => router.push(`/person/${id}/edit`)}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-accent border border-gray-300 hover:border-accent-mid px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-[--ink-mute] hover:text-accent border border-[--rule] hover:border-[--gold] px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit
@@ -252,7 +252,7 @@ export default function PersonPage() {
         {/* Relationships */}
         <section>
           <div className="mb-3">
-            <h2 className="font-display text-xl font-normal text-stone-900 mb-2">Relationships</h2>
+            <h2 className="font-display text-xl font-normal text-[--ink] mb-2">Relationships</h2>
             <div className="flex flex-wrap gap-2">
               {(["add_parent", "add_child", "add_sibling", "add_spouse"] as RelationIntent[]).map((intent) => (
                 <button
@@ -268,7 +268,7 @@ export default function PersonPage() {
               ))}
               <button
                 onClick={() => setShowAddRelationship(true)}
-                className="flex items-center gap-1.5 border border-gray-300 text-gray-500 hover:bg-gray-50 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 border border-[--rule] text-[--ink-mute] hover:bg-[--surface-alt] hover:border-[--gold] text-xs px-2.5 py-1.5 rounded-lg transition-colors"
                 title="Link to an existing family member"
               >
                 <GitMerge className="w-3.5 h-3.5" />
@@ -278,7 +278,7 @@ export default function PersonPage() {
           </div>
 
           {!hasRelationships ? (
-            <p className="text-sm text-gray-400">No relationships recorded yet.</p>
+            <p className="text-sm text-[--ink-mute]">No relationships recorded yet.</p>
           ) : (
             <div className="space-y-4">
               {(Object.entries(grouped) as [string, Relationship[]][])
@@ -315,7 +315,7 @@ export default function PersonPage() {
         {/* Memories */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl font-normal text-stone-900">Memories</h2>
+            <h2 className="font-display text-xl font-normal text-[--ink]">Memories</h2>
             <button
               onClick={() => setShowAddMemory(true)}
               className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
@@ -326,9 +326,9 @@ export default function PersonPage() {
           </div>
 
           {memoriesLoading ? (
-            <p className="text-gray-400 text-sm">Loading memories…</p>
+            <p className="text-[--ink-mute] text-sm">Loading memories…</p>
           ) : memories.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-[--ink-mute]">
               <p className="mb-2">No memories yet for {person.first_name}.</p>
               <p className="text-sm">Be the first to record a story, upload a photo, or share a note.</p>
             </div>

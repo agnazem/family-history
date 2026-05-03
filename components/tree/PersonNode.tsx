@@ -2,9 +2,9 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Avatar } from "@/components/ui/Avatar";
-import type { Person, MemoryType } from "@/types";
+import type { Person } from "@/types";
 
-export type PersonNodeData = Person & { onClick: (id: string) => void; memoryTypes?: MemoryType[]; memoryCount?: number };
+export type PersonNodeData = Person & { onClick: (id: string) => void; memoryCount?: number };
 
 export function PersonNode({ data }: NodeProps) {
   const person = data as unknown as PersonNodeData;
@@ -30,6 +30,7 @@ export function PersonNode({ data }: NodeProps) {
 
   const memoryCount = person.memoryCount ?? 0;
 
+
   return (
     <>
       <Handle type="target" position={Position.Top} className="!bg-[--rule] !border-[--rule]" />
@@ -52,7 +53,7 @@ export function PersonNode({ data }: NodeProps) {
               {displayName}
             </p>
             {dates && (
-              <p className="font-mono text-[10px] tracking-[0.02em] text-[--gold] h-[13px] truncate">
+              <p aria-hidden="true" className="font-mono text-[10px] tracking-[0.02em] text-[--gold] h-[13px] truncate">
                 {dates}
               </p>
             )}

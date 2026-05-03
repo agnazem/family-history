@@ -19,7 +19,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { PersonNode, type PersonNodeData } from "./PersonNode";
 import { RelationshipModal } from "./RelationshipModal";
-import type { Person, Relationship, MemoryType } from "@/types";
+import type { Person, Relationship } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { debounce } from "@/lib/utils";
 
@@ -92,7 +92,6 @@ function getCouples(relationships: Relationship[]): CoupleInfo[] {
 function buildPersonNodes(
   people: Person[],
   onNodeClick: (id: string) => void,
-  memoryTypes: Record<string, MemoryType[]>,
   memoryCounts: Record<string, number>
 ): Node[] {
   return people.map((p) => ({
@@ -102,7 +101,6 @@ function buildPersonNodes(
     data: {
       ...p,
       onClick: onNodeClick,
-      memoryTypes: memoryTypes[p.id] ?? [],
       memoryCount: memoryCounts[p.id] ?? 0,
     } as unknown as Record<string, unknown>,
   }));
@@ -206,10 +204,9 @@ function buildAllNodes(
   people: Person[],
   couples: CoupleInfo[],
   onNodeClick: (id: string) => void,
-  memoryTypes: Record<string, MemoryType[]>,
   memoryCounts: Record<string, number>
 ): Node[] {
-  const personNodes = buildPersonNodes(people, onNodeClick, memoryTypes, memoryCounts);
+  const personNodes = buildPersonNodes(people, onNodeClick, memoryCounts);
   const junctionNodes = computeJunctionNodes(couples, personNodes);
   return [...personNodes, ...junctionNodes];
 }
@@ -220,7 +217,6 @@ interface TreeCanvasProps {
   people: Person[];
   relationships: Relationship[];
   onNodeClick: (personId: string) => void;
-  memoryTypes?: Record<string, MemoryType[]>;
   memoryCounts?: Record<string, number>;
   selectMode?: boolean;
 }
@@ -229,7 +225,6 @@ export function TreeCanvas({
   people,
   relationships,
   onNodeClick,
-  memoryTypes = {},
   memoryCounts = {},
   selectMode = false,
 }: TreeCanvasProps) {
@@ -241,7 +236,7 @@ export function TreeCanvas({
   // All nodes (person + junction) in a single state so React Flow can measure
   // all of them and route edges correctly.
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    buildAllNodes(people, couples, onNodeClick, memoryTypes, memoryCounts)
+    buildAllNodes(people, couples, onNodeClick, memoryCounts)
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     buildAllEdges(relationships, couples, new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }])))
@@ -253,8 +248,8 @@ export function TreeCanvas({
 
   // Sync all nodes when people/relationships change (e.g. after add/edit/auto-layout)
   useMemo(() => {
-    setNodes(buildAllNodes(people, couples, onNodeClick, memoryTypes, memoryCounts));
-  }, [people, onNodeClick, memoryTypes, couples, setNodes]);
+    setNodes(buildAllNodes(people, couples, onNodeClick, memoryCounts));
+  }, [people, onNodeClick, memoryCounts, couples, setNodes]);
 
   useMemo(() => {
     const positions = new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }]));
