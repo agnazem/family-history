@@ -16,6 +16,9 @@ const MEMORY_ICONS: Record<MemoryType, { Icon: React.ElementType; className: str
 
 export function PersonNode({ data }: NodeProps) {
   const person = data as unknown as PersonNodeData;
+  const displayName = person.nickname
+    ? `${person.first_name} "${person.nickname}" ${person.last_name}`
+    : `${person.first_name} ${person.last_name}`;
   const fullName = `${person.first_name} ${person.last_name}`;
   const isDeceased = !!person.dod;
 
@@ -49,7 +52,7 @@ export function PersonNode({ data }: NodeProps) {
           <Avatar src={person.profile_photo_url} name={fullName} size="lg" />
           <div className="text-center w-full">
             <p className={`font-display text-sm font-normal leading-tight line-clamp-2 h-9 overflow-hidden ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
-              {fullName}
+              {displayName}
             </p>
             <p className="text-xs text-stone-400 mt-0.5 h-4 truncate">
               {dates ?? ""}

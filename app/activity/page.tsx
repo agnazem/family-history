@@ -91,13 +91,16 @@ export default function ActivityPage() {
           .in("memory_id", memoryIds),
         supabase
           .from("family_members")
-          .select("user_id, display_name")
+          .select("user_id, display_name, email")
           .eq("family_id", family!.id)
           .in("user_id", recorderIds),
       ]);
 
       const memberMap = new Map<string, string>(
-        (members ?? []).map((m) => [m.user_id, m.display_name ?? "A family member"])
+        (members ?? []).map((m) => {
+          const name = m.display_name ?? (m.email ? m.email.split("@")[0] : null) ?? "Someone";
+          return [m.user_id, name];
+        })
       );
 
       const tagMap = new Map<string, string[]>();

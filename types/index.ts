@@ -26,7 +26,9 @@ export interface Person {
   id: string;
   family_id: string;
   first_name: string;
+  middle_name: string | null;
   last_name: string;
+  nickname: string | null;
   dob: string | null;
   dod: string | null;
   bio: string | null;

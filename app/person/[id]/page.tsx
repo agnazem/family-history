@@ -121,7 +121,7 @@ export default function PersonPage() {
     );
   }
 
-  const fullName = `${person.first_name} ${person.last_name}`;
+  const fullName = [person.first_name, person.middle_name, person.last_name].filter(Boolean).join(" ");
 
   // Group relationships by type relative to this person
   const grouped = {
@@ -178,7 +178,12 @@ export default function PersonPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">{fullName}</h1>
+                <div>
+                  <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">{fullName}</h1>
+                  {person.nickname && (
+                    <p className="text-sm text-stone-500 mt-0.5">Known as &ldquo;{person.nickname}&rdquo;</p>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => router.push(`/person/${id}/edit`)}
