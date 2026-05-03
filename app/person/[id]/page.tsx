@@ -285,7 +285,7 @@ export default function PersonPage() {
                 .filter(([, rels]) => rels.length > 0)
                 .map(([group, rels]) => (
                   <div key={group}>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                    <p className="eyebrow mb-2">
                       {RELATIONSHIP_SECTION_LABELS[group]}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -296,10 +296,12 @@ export default function PersonPage() {
                           <button
                             key={rel.id}
                             onClick={() => setSelectedRelationship(rel)}
-                            className="flex items-center gap-2 bg-white border border-gray-200 hover:border-accent-mid rounded-xl px-3 py-2 text-sm text-gray-700 hover:text-gray-900 transition-all shadow-sm"
+                            className="flex items-center gap-2 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-xl px-3 py-2 transition-colors"
                           >
                             <Avatar src={other.profile_photo_url} name={`${other.first_name} ${other.last_name}`} size="sm" />
-                            <span className="font-medium">{other.first_name} {other.last_name}</span>
+                            <div className="text-left">
+                              <p className="text-[15px] font-medium text-[--ink]">{other.first_name} {other.last_name}</p>
+                            </div>
                           </button>
                         );
                       })}
