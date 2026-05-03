@@ -269,7 +269,6 @@ export default function TreePage() {
             people={people}
             relationships={relationships}
             onNodeClick={handleNodeClick}
-            memoryTypes={memoryTypes}
             memoryCounts={memoryCounts}
             selectMode={selectMode}
           />

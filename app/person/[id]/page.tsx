@@ -121,7 +121,7 @@ export default function PersonPage() {
   if (!person) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <p className="text-gray-500">Person not found.</p>
+        <p className="text-[--ink-mute]">Person not found.</p>
       </div>
     );
   }
@@ -149,11 +149,11 @@ export default function PersonPage() {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Header */}
-      <div className="bg-white border-b border-accent-border shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+      <div className="bg-[--surface] border-b border-[--rule]">
+        <div className="max-w-2xl mx-auto px-4 py-6">
           <button
             onClick={() => router.push("/tree")}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4"
+            className="flex items-center gap-1.5 text-sm text-[--ink-mute] hover:text-[--ink-soft] mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to tree
@@ -184,9 +184,9 @@ export default function PersonPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">{fullName}</h1>
+                  <h1 className="font-display text-[clamp(28px,7vw,56px)] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">{fullName}</h1>
                   {person.nickname && (
-                    <p className="text-sm text-stone-500 mt-0.5">Known as &ldquo;{person.nickname}&rdquo;</p>
+                    <p className="text-sm text-[--ink-mute] mt-0.5">Known as &ldquo;<span className="italic-flourish">{person.nickname}</span>&rdquo;</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -200,7 +200,7 @@ export default function PersonPage() {
                   </button>
                   <button
                     onClick={() => router.push(`/person/${id}/edit`)}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-accent border border-gray-300 hover:border-accent-mid px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-[--ink-mute] hover:text-accent border border-[--rule] hover:border-[--gold] px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit
@@ -218,12 +218,17 @@ export default function PersonPage() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500">
-                {person.dob && <span>Born {formatDate(person.dob)}</span>}
-                {person.dod && <span>Died {formatDate(person.dod)}</span>}
-              </div>
+              {(person.dob || person.dod) && (
+                <p className="dateline mt-1">
+                  {person.dob && person.dod
+                    ? `${new Date(person.dob).getFullYear()} — ${new Date(person.dod).getFullYear()}`
+                    : person.dob
+                    ? `b. ${new Date(person.dob).getFullYear()}`
+                    : `d. ${new Date(person.dod!).getFullYear()}`}
+                </p>
+              )}
               {person.bio && (
-                <p className="text-gray-600 mt-2 leading-relaxed">{person.bio}</p>
+                <p className="text-[19px] leading-[1.55] text-[--ink-soft] mt-3 max-w-[60ch]">{person.bio}</p>
               )}
             </div>
           </div>
@@ -247,7 +252,7 @@ export default function PersonPage() {
         {/* Relationships */}
         <section>
           <div className="mb-3">
-            <h2 className="font-display text-xl font-normal text-stone-900 mb-2">Relationships</h2>
+            <h2 className="font-display text-xl font-normal text-[--ink] mb-2">Relationships</h2>
             <div className="flex flex-wrap gap-2">
               {(["add_parent", "add_child", "add_sibling", "add_spouse"] as RelationIntent[]).map((intent) => (
                 <button
@@ -263,7 +268,7 @@ export default function PersonPage() {
               ))}
               <button
                 onClick={() => setShowAddRelationship(true)}
-                className="flex items-center gap-1.5 border border-gray-300 text-gray-500 hover:bg-gray-50 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 border border-[--rule] text-[--ink-mute] hover:bg-[--surface-alt] hover:border-[--gold] text-xs px-2.5 py-1.5 rounded-lg transition-colors"
                 title="Link to an existing family member"
               >
                 <GitMerge className="w-3.5 h-3.5" />
@@ -273,14 +278,14 @@ export default function PersonPage() {
           </div>
 
           {!hasRelationships ? (
-            <p className="text-sm text-gray-400">No relationships recorded yet.</p>
+            <p className="text-sm text-[--ink-mute]">No relationships recorded yet.</p>
           ) : (
             <div className="space-y-4">
               {(Object.entries(grouped) as [string, Relationship[]][])
                 .filter(([, rels]) => rels.length > 0)
                 .map(([group, rels]) => (
                   <div key={group}>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                    <p className="eyebrow mb-2">
                       {RELATIONSHIP_SECTION_LABELS[group]}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -291,10 +296,12 @@ export default function PersonPage() {
                           <button
                             key={rel.id}
                             onClick={() => setSelectedRelationship(rel)}
-                            className="flex items-center gap-2 bg-white border border-gray-200 hover:border-accent-mid rounded-xl px-3 py-2 text-sm text-gray-700 hover:text-gray-900 transition-all shadow-sm"
+                            className="flex items-center gap-2 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-xl px-3 py-2 transition-colors"
                           >
                             <Avatar src={other.profile_photo_url} name={`${other.first_name} ${other.last_name}`} size="sm" />
-                            <span className="font-medium">{other.first_name} {other.last_name}</span>
+                            <div className="text-left">
+                              <p className="text-[15px] font-medium text-[--ink]">{other.first_name} {other.last_name}</p>
+                            </div>
                           </button>
                         );
                       })}
@@ -308,7 +315,7 @@ export default function PersonPage() {
         {/* Memories */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl font-normal text-stone-900">Memories</h2>
+            <h2 className="font-display text-xl font-normal text-[--ink]">Memories</h2>
             <button
               onClick={() => setShowAddMemory(true)}
               className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
@@ -319,9 +326,9 @@ export default function PersonPage() {
           </div>
 
           {memoriesLoading ? (
-            <p className="text-gray-400 text-sm">Loading memories…</p>
+            <p className="text-[--ink-mute] text-sm">Loading memories…</p>
           ) : memories.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-[--ink-mute]">
               <p className="mb-2">No memories yet for {person.first_name}.</p>
               <p className="text-sm">Be the first to record a story, upload a photo, or share a note.</p>
             </div>
