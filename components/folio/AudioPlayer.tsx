@@ -23,7 +23,26 @@ export function AudioPlayer({ src, className = "" }: AudioPlayerProps) {
 
   useEffect(() => {
     const audio = new Audio(src);
-    audio.onloadedmetadata = () => setDuration(audio.duration);
+    audio.preload = "metadata";
+
+    function resolveInfiniteDuration() {
+      // Some servers (e.g. Supabase Storage) stream audio without Content-Length,
+      // causing the browser to report duration=Infinity. Seeking past the end
+      // forces a range request that reveals the true duration.
+      if (audio.duration === Infinity || isNaN(audio.duration)) {
+        audio.currentTime = 1e101;
+      } else {
+        setDuration(audio.duration);
+      }
+    }
+
+    audio.onloadedmetadata = resolveInfiniteDuration;
+    audio.ondurationchange = () => {
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+        audio.currentTime = 0;
+      }
+    };
     audio.ontimeupdate = () => setCurrentTime(audio.currentTime);
     audio.onended = () => { setPlaying(false); setCurrentTime(0); };
     audio.onerror = () => setPlaying(false);

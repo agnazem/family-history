@@ -105,7 +105,7 @@ export default function EditPersonPage() {
     <div className="min-h-screen bg-canvas">
       <div className="max-w-lg mx-auto px-4 py-8">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push(`/person/${id}`)}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -200,7 +200,7 @@ export default function EditPersonPage() {
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => router.push(`/person/${id}`)}
                 className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50"
               >
                 Cancel
