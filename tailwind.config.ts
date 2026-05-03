@@ -9,20 +9,29 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        accent: {
-          DEFAULT: "#8B5E3C",
-          hover:   "#7A5234",
-          mid:     "#C2874F",
-          pale:    "#F5EFE8",
-          border:  "#DBC9B6",
+        canvas:        "var(--canvas)",
+        surface:       "var(--surface)",
+        "surface-alt": "var(--surface-alt)",
+        ink: {
+          DEFAULT: "var(--ink)",
+          soft:    "var(--ink-soft)",
+          mute:    "var(--ink-mute)",
         },
-        canvas: "#FAFAF8",
+        rule:          "var(--rule)",
+        gold:          "var(--gold)",
+        accent: {
+          DEFAULT: "var(--accent)",
+          hover:   "#7A5234",
+          mid:     "var(--gold)",
+          pale:    "var(--accent-soft)",
+          border:  "var(--rule)",
+          soft:    "var(--accent-soft)",
+        },
       },
       fontFamily: {
         display: ["var(--font-fraunces)", "Georgia", "serif"],
         sans:    ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        mono:    ["var(--font-dm-mono)", "ui-monospace", "SF Mono", "monospace"],
       },
     },
   },
