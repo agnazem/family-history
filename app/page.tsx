@@ -54,9 +54,9 @@ export default function LandingPage() {
         <div className="lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-16">
           <div className="flex items-center gap-3 mb-8">
             <BookOpen className="w-10 h-10 text-accent" />
-            <h1 className="font-display text-4xl font-light text-stone-900 tracking-tight">Family History</h1>
+            <h1 className="font-display text-[40px] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">Family History</h1>
           </div>
-          <p className="text-xl text-stone-600 mb-8 leading-relaxed">
+          <p className="text-[19px] leading-[1.55] text-[--ink-soft] mb-8 max-w-[480px]">
             Collaboratively build your family tree and preserve the stories,
             voices, and memories of the people who shaped your family.
           </p>
@@ -66,7 +66,7 @@ export default function LandingPage() {
               { icon: Mic, text: "Record audio stories and memories" },
               { icon: Image, text: "Preserve photos and family artifacts" },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3 text-stone-600">
+              <div key={text} className="flex items-center gap-3 text-[--ink-soft]">
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 <span>{text}</span>
               </div>
@@ -76,13 +76,13 @@ export default function LandingPage() {
 
         {/* Right: auth form */}
         <div className="lg:w-1/2 flex items-center justify-center px-8 py-16">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-            <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+          <div className="w-full max-w-md bg-[--surface] border border-[--rule] rounded-xl p-8">
+            <div className="flex rounded-lg bg-[--surface-alt] p-1 mb-6">
               <button
                 className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] ${
                   mode === "signin"
-                    ? "bg-white shadow text-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-[--surface] shadow-sm text-[--ink]"
+                    : "text-[--ink-mute] hover:text-[--ink-soft]"
                 }`}
                 onClick={() => setMode("signin")}
               >
@@ -91,8 +91,8 @@ export default function LandingPage() {
               <button
                 className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] ${
                   mode === "signup"
-                    ? "bg-white shadow text-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-[--surface] shadow-sm text-[--ink]"
+                    : "text-[--ink-mute] hover:text-[--ink-soft]"
                 }`}
                 onClick={() => setMode("signup")}
               >
@@ -103,7 +103,7 @@ export default function LandingPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[--ink-soft] mb-1">
                     Full Name
                   </label>
                   <input
@@ -111,13 +111,13 @@ export default function LandingPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
+                    className="w-full border border-[--rule] bg-[--surface] rounded-lg px-3 py-2 text-sm text-[--ink] focus:outline-none focus:ring-2 focus:ring-[--gold] placeholder:text-[--ink-mute]"
                     placeholder="Jane Smith"
                   />
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[--ink-soft] mb-1">
                   Email
                 </label>
                 <input
@@ -125,12 +125,12 @@ export default function LandingPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
+                  className="w-full border border-[--rule] bg-[--surface] rounded-lg px-3 py-2 text-sm text-[--ink] focus:outline-none focus:ring-2 focus:ring-[--gold] placeholder:text-[--ink-mute]"
                   placeholder="you@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[--ink-soft] mb-1">
                   Password
                 </label>
                 <input
@@ -139,18 +139,18 @@ export default function LandingPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
+                  className="w-full border border-[--rule] bg-[--surface] rounded-lg px-3 py-2 text-sm text-[--ink] focus:outline-none focus:ring-2 focus:ring-[--gold] placeholder:text-[--ink-mute]"
                   placeholder="••••••••"
                 />
               </div>
 
               {error && (
-                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                   {error}
                 </p>
               )}
               {message && (
-                <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                <p className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                   {message}
                 </p>
               )}

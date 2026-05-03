@@ -149,8 +149,8 @@ export default function PersonPage() {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Header */}
-      <div className="bg-white border-b border-accent-border shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+      <div className="bg-[--surface] border-b border-[--rule]">
+        <div className="max-w-2xl mx-auto px-4 py-6">
           <button
             onClick={() => router.push("/tree")}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -184,9 +184,9 @@ export default function PersonPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">{fullName}</h1>
+                  <h1 className="font-display text-[56px] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">{fullName}</h1>
                   {person.nickname && (
-                    <p className="text-sm text-stone-500 mt-0.5">Known as &ldquo;{person.nickname}&rdquo;</p>
+                    <p className="text-sm text-[--ink-mute] mt-0.5">Known as &ldquo;<span className="italic-flourish">{person.nickname}</span>&rdquo;</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -218,12 +218,17 @@ export default function PersonPage() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500">
-                {person.dob && <span>Born {formatDate(person.dob)}</span>}
-                {person.dod && <span>Died {formatDate(person.dod)}</span>}
-              </div>
+              {(person.dob || person.dod) && (
+                <p className="dateline mt-1">
+                  {person.dob && person.dod
+                    ? `${new Date(person.dob).getFullYear()} — ${new Date(person.dod).getFullYear()}`
+                    : person.dob
+                    ? `b. ${new Date(person.dob).getFullYear()}`
+                    : `d. ${new Date(person.dod!).getFullYear()}`}
+                </p>
+              )}
               {person.bio && (
-                <p className="text-gray-600 mt-2 leading-relaxed">{person.bio}</p>
+                <p className="text-[19px] leading-[1.55] text-[--ink-soft] mt-3 max-w-[60ch]">{person.bio}</p>
               )}
             </div>
           </div>
