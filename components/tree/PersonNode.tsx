@@ -1,18 +1,10 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import type { Person, MemoryType } from "@/types";
 
 export type PersonNodeData = Person & { onClick: (id: string) => void; memoryTypes?: MemoryType[]; memoryCount?: number };
-
-const MEMORY_ICONS: Record<MemoryType, { Icon: React.ElementType; className: string }> = {
-  audio:    { Icon: Mic,       className: "text-purple-500" },
-  photo:    { Icon: ImageIcon, className: "text-accent-mid" },
-  document: { Icon: FileText,  className: "text-green-600" },
-  note:     { Icon: PenLine,   className: "text-stone-400" },
-};
 
 export function PersonNode({ data }: NodeProps) {
   const person = data as unknown as PersonNodeData;
@@ -44,30 +36,23 @@ export function PersonNode({ data }: NodeProps) {
       <Handle type="target" position={Position.Top} className="!bg-accent-mid" />
       <div
         onClick={() => person.onClick(person.id)}
-        className={`w-40 bg-white rounded-xl shadow-md border-2 p-3 cursor-pointer hover:shadow-lg hover:border-accent-mid transition-all select-none ${
-          isDeceased ? "border-gray-300" : "border-accent-border"
+        className={`relative w-[152px] bg-white rounded-xl shadow-sm border cursor-pointer transition-all select-none hover:shadow-md hover:border-accent-mid ${
+          isDeceased ? "border-gray-200" : "border-accent-border"
         }`}
+        style={{ padding: "10px 13px" }}
       >
-        <div className="flex flex-col items-center gap-2">
-          <Avatar src={person.profile_photo_url} name={fullName} size="lg" />
-          <div className="text-center w-full">
-            <p className={`font-display text-sm font-normal leading-tight line-clamp-2 h-9 overflow-hidden ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
+        {memoryCount > 0 && (
+          <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-accent-mid" />
+        )}
+        <div className="flex items-center gap-2.5">
+          <Avatar src={person.profile_photo_url} name={fullName} size="sm" />
+          <div className="min-w-0 flex-1">
+            <p className={`font-display text-[12.5px] font-normal leading-snug line-clamp-2 ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
               {displayName}
             </p>
-            <p className="text-xs text-stone-400 mt-0.5 h-4 truncate">
+            <p className="text-[10px] text-stone-400 mt-0.5 truncate">
               {dates ?? ""}
             </p>
-          </div>
-          <div className="flex items-center gap-1.5 pt-0.5 border-t border-gray-100 w-full justify-center h-5">
-            {memoryTypes.map((type) => {
-              const { Icon, className } = MEMORY_ICONS[type];
-              return <Icon key={type} className={`w-3 h-3 ${className}`} />;
-            })}
-            {memoryCount > 0 && (
-              <span className="ml-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 leading-none">
-                {memoryCount}
-              </span>
-            )}
           </div>
         </div>
       </div>

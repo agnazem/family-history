@@ -126,8 +126,10 @@ export default function TreePage() {
     <div className="h-screen flex flex-col bg-canvas">
       {/* Toolbar */}
       <header className="flex items-center justify-between px-3 py-2 bg-white border-b border-accent-border shadow-sm z-10 gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-          <BookOpen className="w-5 h-5 text-accent flex-shrink-0" />
+        <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0">
+          <div className="w-[26px] h-[26px] rounded-[7px] bg-accent flex items-center justify-center flex-shrink-0">
+            <BookOpen className="w-3.5 h-3.5 text-white" />
+          </div>
           <span className="font-display font-normal text-stone-900 truncate text-sm sm:text-base">{family.name}</span>
         </div>
         <div className="flex items-center gap-1">
