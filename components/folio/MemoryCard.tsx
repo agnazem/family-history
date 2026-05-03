@@ -7,17 +7,17 @@ import type { Memory, Person } from "@/types";
 import Image from "next/image";
 
 const TYPE_ICONS = {
-  audio: Mic,
-  photo: ImageIcon,
+  audio:    Mic,
+  photo:    ImageIcon,
   document: FileText,
-  note: PenLine,
+  note:     PenLine,
 };
 
-const TYPE_COLORS = {
-  audio:    "bg-purple-50 border-purple-200 text-purple-700",
-  photo:    "bg-teal-50 border-teal-200 text-teal-700",
-  document: "bg-green-50 border-green-200 text-green-700",
-  note:     "bg-stone-50 border-stone-200 text-stone-600",
+const TYPE_LABELS = {
+  audio:    "Audio",
+  photo:    "Photo",
+  document: "Document",
+  note:     "Note",
 };
 
 interface MemoryCardProps {
@@ -32,24 +32,25 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`border rounded-xl p-4 ${TYPE_COLORS[memory.type]} ${onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+      className={`bg-[--surface] border border-[--rule] rounded-xl p-5 transition-colors ${
+        onClick ? "cursor-pointer hover:border-[--gold]" : ""
+      }`}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
-          <Icon className="w-4 h-4" />
-        </div>
+        <Icon className="w-4 h-4 mt-1 flex-shrink-0 text-[--ink-mute]" />
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm">{memory.title}</p>
-          <p className="text-xs opacity-70 mt-0.5">
-            {formatDate(memory.created_at)}
+          <span className="eyebrow">{TYPE_LABELS[memory.type]}</span>
+          <p className="font-display text-[22px] leading-[1.2] font-normal text-[--ink] mt-0.5">
+            {memory.title}
           </p>
+          <p className="body-sm mt-1">{formatDate(memory.created_at)}</p>
 
           {memory.type === "audio" && memory.storage_url && (
-            <AudioPlayer src={memory.storage_url} className="mt-2" />
+            <AudioPlayer src={memory.storage_url} className="mt-3" />
           )}
 
           {memory.type === "photo" && memory.storage_url && (
-            <div className="mt-2 rounded-lg overflow-hidden">
+            <div className="mt-3 rounded-lg overflow-hidden">
               <Image
                 src={memory.storage_url}
                 alt={memory.title}
@@ -65,7 +66,7 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
               href={memory.storage_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 mt-2 text-xs font-medium opacity-80 hover:opacity-100"
+              className="inline-flex items-center gap-1.5 mt-3 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               Download file
@@ -73,13 +74,13 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
           )}
 
           {memory.description && (
-            <p className="text-sm mt-2 opacity-80 leading-relaxed">
+            <p className="text-[15px] leading-relaxed text-[--ink-soft] mt-2">
               {memory.description}
             </p>
           )}
 
           {taggedPeople && taggedPeople.length > 0 && (
-            <p className="flex items-center gap-1 text-xs mt-2 opacity-60">
+            <p className="flex items-center gap-1.5 mt-2 text-[13px] text-[--ink-mute]">
               <Users className="w-3 h-3 flex-shrink-0" />
               {taggedPeople.map((p) => `${p.first_name} ${p.last_name}`).join(", ")}
             </p>

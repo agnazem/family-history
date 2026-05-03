@@ -37,10 +37,10 @@ function CoupleJunctionNode() {
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className="!w-2 !h-2 !bg-purple-400 !border-purple-300"
+        className="!w-2 !h-2 !bg-[--rule] !border-[--rule]"
       />
-      <div className="w-5 h-5 bg-white border-2 border-purple-400 rounded-full flex items-center justify-center shadow-sm pointer-events-none select-none">
-        <span className="text-purple-500 text-[8px] leading-none">♥</span>
+      <div className="w-5 h-5 bg-[--surface] border border-[--rule] rounded-full flex items-center justify-center pointer-events-none select-none">
+        <span className="text-[--gold] text-[8px] leading-none">♥</span>
       </div>
     </>
   );
@@ -50,8 +50,8 @@ const nodeTypes = { person: PersonNode, coupleJunction: CoupleJunctionNode };
 
 // ── edge styles ──────────────────────────────────────────────────────────────
 const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
-  parent_child: { stroke: "#2563eb", strokeWidth: 2 },
-  spouse:       { stroke: "#7c3aed", strokeWidth: 1.5, strokeDasharray: "5,3" },
+  parent_child: { stroke: "#E0D2BB", strokeWidth: 1 },
+  spouse:       { stroke: "#E0D2BB", strokeWidth: 1, strokeDasharray: "4,3" },
 };
 
 // ── graph helpers ────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ function buildAllEdges(
         target: rel.person_b_id,
         type: "smoothstep",
         style: EDGE_STYLES.parent_child,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#2563eb" },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#E0D2BB" },
       });
     }
   }
@@ -194,7 +194,7 @@ function buildAllEdges(
         target: childId,
         type: "smoothstep",
         style: EDGE_STYLES.parent_child,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#2563eb" },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#E0D2BB" },
       });
     }
   }
@@ -362,14 +362,14 @@ export function TreeCanvas({
         panOnDrag={selectMode ? [1, 2] : true}
         multiSelectionKeyCode="Shift"
       >
-        <Background color="#bfdbfe" gap={24} size={1} />
+        <Background color="#E0D2BB" gap={24} size={1} />
         <Controls />
         <MiniMap
           nodeColor={(n) => {
             const d = n.data as unknown as PersonNodeData;
-            return d.dod ? "#d1d5db" : "#bfdbfe";
+            return d.dod ? "#8A7E69" : "#C2874F";
           }}
-          maskColor="rgba(0,0,0,0.05)"
+          maskColor="rgba(31,26,20,0.04)"
         />
       </ReactFlow>
     </div>

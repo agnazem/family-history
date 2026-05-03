@@ -28,43 +28,42 @@ export function PersonNode({ data }: NodeProps) {
       ? `b. ${birthYear}`
       : null;
 
-  const memoryTypes = person.memoryTypes ?? [];
   const memoryCount = person.memoryCount ?? 0;
 
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!bg-accent-mid" />
+      <Handle type="target" position={Position.Top} className="!bg-[--rule] !border-[--rule]" />
       <div
         onClick={() => person.onClick(person.id)}
-        className={`relative w-[192px] h-[64px] bg-white rounded-xl shadow-sm border cursor-pointer transition-all select-none hover:shadow-md hover:border-accent-mid flex items-center ${
-          isDeceased ? "border-gray-200" : "border-accent-border"
+        className={`relative w-[192px] h-[64px] rounded-xl border cursor-pointer transition-colors select-none flex items-center hover:border-[--gold] ${
+          isDeceased
+            ? "bg-[--surface] border-[--rule] opacity-70"
+            : "bg-[--surface] border-[--rule]"
         }`}
         style={{ padding: "0 13px" }}
       >
         {memoryCount > 0 && (
-          <span className="absolute top-[7px] right-[7px] w-2 h-2 rounded-full bg-accent-mid ring-2 ring-white" />
+          <span className="absolute top-[7px] right-[7px] w-2 h-2 rounded-full bg-[--gold] ring-2 ring-[--surface]" />
         )}
         <div className="flex items-center gap-2.5 w-full min-w-0">
           <Avatar src={person.profile_photo_url} name={fullName} size="sm" />
           <div className="min-w-0 flex-1">
-            <p className={`font-display text-[12.5px] font-normal leading-snug line-clamp-2 ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
+            <p className={`font-display text-[12.5px] font-normal leading-snug line-clamp-2 ${isDeceased ? "text-[--ink-mute]" : "text-[--ink]"}`}>
               {displayName}
             </p>
-            <p className="text-[10px] text-stone-400 h-[13px] truncate">
-              {dates ?? ""}
-            </p>
+            {dates && (
+              <p className="font-mono text-[10px] tracking-[0.02em] text-[--gold] h-[13px] truncate">
+                {dates}
+              </p>
+            )}
           </div>
         </div>
       </div>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-accent-mid"
-      />
-      <Handle type="source" position={Position.Right} id="right" className="!bg-accent-mid" />
-      <Handle type="target" position={Position.Right} id="right-in" className="!bg-accent-mid" />
-      <Handle type="source" position={Position.Left} id="left-out" className="!bg-accent-mid" />
-      <Handle type="target" position={Position.Left} id="left" className="!bg-accent-mid" />
+      <Handle type="source" position={Position.Bottom} className="!bg-[--rule] !border-[--rule]" />
+      <Handle type="source" position={Position.Right} id="right" className="!bg-[--rule] !border-[--rule]" />
+      <Handle type="target" position={Position.Right} id="right-in" className="!bg-[--rule] !border-[--rule]" />
+      <Handle type="source" position={Position.Left} id="left-out" className="!bg-[--rule] !border-[--rule]" />
+      <Handle type="target" position={Position.Left} id="left" className="!bg-[--rule] !border-[--rule]" />
     </>
   );
 }
