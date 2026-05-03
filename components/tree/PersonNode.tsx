@@ -36,7 +36,7 @@ export function PersonNode({ data }: NodeProps) {
       <Handle type="target" position={Position.Top} className="!bg-accent-mid" />
       <div
         onClick={() => person.onClick(person.id)}
-        className={`relative w-[152px] h-[52px] bg-white rounded-xl shadow-sm border cursor-pointer transition-all select-none hover:shadow-md hover:border-accent-mid flex items-center ${
+        className={`relative w-[192px] h-[64px] bg-white rounded-xl shadow-sm border cursor-pointer transition-all select-none hover:shadow-md hover:border-accent-mid flex items-center ${
           isDeceased ? "border-gray-200" : "border-accent-border"
         }`}
         style={{ padding: "0 13px" }}
@@ -47,7 +47,7 @@ export function PersonNode({ data }: NodeProps) {
         <div className="flex items-center gap-2.5 w-full min-w-0">
           <Avatar src={person.profile_photo_url} name={fullName} size="sm" />
           <div className="min-w-0 flex-1">
-            <p className={`font-display text-[12.5px] font-normal leading-snug truncate ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
+            <p className={`font-display text-[12.5px] font-normal leading-snug line-clamp-2 ${isDeceased ? "text-stone-400" : "text-stone-800"}`}>
               {displayName}
             </p>
             <p className="text-[10px] text-stone-400 h-[13px] truncate">
