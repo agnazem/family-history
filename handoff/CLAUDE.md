@@ -6,17 +6,41 @@ Companion file: `handoff/tokens.css` — drop-in design tokens.
 
 ## Status (as of May 2026)
 
-**Phase 1 — Visual refresh — ✅ SHIPPED.**
-Warm amber tokens, Fraunces 400 / bigger sizes / DM Mono eyebrows, `.eyebrow` / `.italic-flourish` / `.dateline` utilities, tree nodes + person page header + memory cards restyled, hairline + `hover:border-[--gold]` interactions throughout.
+**Phase 1 — Visual refresh — ✅ SHIPPED** (CHANGELOG v0.1.1.0).
+Warm amber tokens in `app/globals.css` and `tailwind.config.ts`, Fraunces 400 / bigger sizes / DM Mono eyebrows, `.eyebrow` / `.italic-flourish` / `.dateline` utilities, tree nodes + person page header + memory cards restyled, hairline + `hover:border-[--gold]` interactions throughout.
 
 **Phase 2 — Memory detail + audio pipeline — ✅ SHIPPED.**
-`/memory/[id]` server-rendered route with OG tags, custom audio player (1x/1.5x/2x), live Whisper transcription with two-pass finalizer, editable transcript with debounced autosave, person tagging, threaded comments, audio/photo/document/note memory types. Bonus surfaces shipped alongside: `/timeline`, `/activity`, "Tell me about" recording flow on person pages, AI-generated person summaries.
+`app/memory/[id]/page.tsx` + `MemoryDetailClient.tsx` server-rendered route with OG tags, `components/folio/AudioPlayer.tsx` (1x/1.5x/2x), live Whisper transcription via `app/api/recordings/*` with two-pass finalizer, editable transcript with debounced autosave, person tagging, threaded comments, audio/photo/document/note memory types. Bonus surfaces shipped alongside: `/timeline`, `/activity`, "Tell me about" recording flow (`components/folio/TellMeModal.tsx`), AI-generated person summaries (`components/folio/PersonSummary.tsx` + `app/api/ai/summarize`).
 
-**Phase 2.5 — Home page — ⏳ NEXT.** Spec below. Depends on Phase 2's `/memory/[id]` route, which exists.
+**Phase 2.5 — Home page — ✅ SHIPPED.**
+`app/home/page.tsx` (note: `app/page.tsx` is the landing/auth page; `app/home/page.tsx` is the signed-in home) backed by `components/home/{GreetingHero, StoryRow, ContributorsCard, ArchiveStatsCard, UpcomingCard, SundayPromptCard}`.
 
-**Phase 3 — Sunday prompt — ⏳ AFTER 2.5.** Spec below. Depends on Phase 2.5's prompt card surface.
+**Phase 3 — Sunday prompt — ⏳ PARTIAL.**
+`SundayPromptCard.tsx` exists on home. **Outstanding:** `/prompts` archive route, weekly email cron, `prompts` table seeded from `prompts-seed.md`, prompt-detail page showing all family answers. Spec below.
 
-The original Phase 1 / Phase 2 specs are preserved below for reference and for re-derivation if anything needs to be revisited; treat them as historical unless something on those surfaces is being explicitly reworked.
+---
+
+## Phase 4 — v2 design pass — ⏳ NEXT (this handoff)
+
+What this round of design work is asking for. Lives across these reference artboards in `reference/Family History - Folio.html`:
+
+| Artboard | Reference JSX | Status vs. shipped |
+|---|---|---|
+| Design system | `screens/design-system.jsx` | Audit only — verify tokens/utilities match what's in `app/globals.css` and `tailwind.config.ts`. |
+| Home | `screens/home.jsx` | Compare against `app/home/page.tsx`. Likely style polish + minor section tweaks. |
+| Person profile | `screens/person.jsx` | Compare against `app/person/[id]/page.tsx`. Note any new sections, header treatment, or memory-grid changes. |
+| Tree v1 | `screens/tree.jsx` | Compare against `app/tree/page.tsx` + `components/tree/PersonNode.tsx` etc. The "Tree visualization upgrade" item in `TODOS.md` overlaps — this may close it. |
+| **Tree v2** | `screens/tree-v2.jsx` | **NEW.** Direct-lineage emphasis + click-to-reroot. The big new feature. Read the JSX comment block at the top — it defines exactly what counts as direct lineage. Pure client-side computation given the tree data we already fetch. Add as a toggle on the existing tree page or as a separate route — TBD with implementer. |
+| Memory detail | `screens/memory.jsx` | Compare against `app/memory/[id]/MemoryDetailClient.tsx`. Likely style polish only — the functional pipeline shipped in Phase 2. |
+| Record flow | `screens/record.jsx` | Compare against `app/record/page.tsx` + `components/folio/{AudioRecorder, TellMeModal}.tsx`. |
+| Mobile · Home | `screens/mobile.jsx` (top half) | Responsive variant of home. Verify `app/home/page.tsx` matches at small breakpoints. |
+| Mobile · Record | `screens/mobile.jsx` (bottom half) | Responsive variant of record. |
+
+**The build prompt (`BUILD_PROMPT.md`) walks Claude Code through diffing each surface and stopping for confirmation before implementing.**
+
+---
+
+The original Phase 1 / Phase 2 / Phase 2.5 / Phase 3 specs are preserved below for reference. Treat them as historical unless something on those surfaces is being explicitly reworked.
 
 ---
 

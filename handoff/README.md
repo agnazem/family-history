@@ -30,20 +30,21 @@ The one place to expect ambiguity is anything the spec calls out as "the spec is
 **Shipped:**
 - **Phase 1** — Visual refresh (tokens, type, restyled tree/person/memory cards, hairline + gold-hover treatment)
 - **Phase 2** — `/memory/[id]` route, custom audio player, live Whisper transcription with two-pass finalizer, editable transcripts, person tagging, threaded comments, `/timeline`, `/activity`, "Tell me about" recording flow, AI person summaries
+- **Phase 2.5** — Home page at `/home` (`app/home/page.tsx` + `components/home/*`)
+- **Phase 3 (partial)** — `SundayPromptCard` slot on home
 
 **Next up — what this handoff is asking you to build:**
-- **Phase 2.5** — Home page (currently a placeholder; see `CLAUDE.md` §Phase 2.5 for the full build spec including greeting logic, data shape, component breakdown, and mobile variant)
-- **Phase 3** — Sunday prompt feature (depends on Phase 2.5; spec in `CLAUDE.md` §Phase 3)
+- **Phase 4 — v2 design pass** — A new round of design work covering Tree v2 (with click-to-reroot lineage logic — the big new feature), plus polish across home, person, memory, record, and mobile. See `CLAUDE.md` §Phase 4 for the surface-by-surface table.
+- **Phase 3 completion** — `/prompts` archive, prompts table + seed, weekly email cron, prompt-detail pages.
 
-Phase 2.5 should ship first because Phase 3's prompt card needs a slot on Home to live in.
+The build prompt in `BUILD_PROMPT.md` walks through diff → plan → implement → verify with explicit gates so you can confirm scope before any code is written.
 
 ## How to start (suggested workflow for Claude Code)
 
-1. Read `CLAUDE.md` end-to-end. The Status block at the top tells you exactly what's shipped and what isn't.
-2. Open `reference/Family History - Folio.html` in a browser. Pan around. The "Home" artboard and the "Mobile · Home" artboard are what you're building.
-3. Read `reference/screens/home.jsx` alongside `CLAUDE.md` §Phase 2.5. The JSX shows component structure and inline measurements; the spec covers data, edge cases, and copy logic.
-4. Build Phase 2.5 against the existing codebase patterns. Spec lists six new files under `components/home/`.
-5. When 2.5 is shipped, move to Phase 3. The Sunday prompt card already has a slot — you're wiring data and adding the cron + email + archive route.
+1. Read `BUILD_PROMPT.md` first — it's the directive. It tells you what to read, in what order, and where to stop and ask.
+2. Then read `DESIGN_BRIEF.md` (the why), then `CLAUDE.md` (the spec). The Status block in CLAUDE.md tells you exactly what's shipped.
+3. Open `reference/Family History - Folio.html` in a browser. Pan around. Every surface in the Phase 4 table is on this canvas.
+4. Follow the build prompt's four steps: diff, plan, implement, verify. Stop and confirm at each gate.
 
 ## Assets and brand
 
