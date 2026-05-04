@@ -7,10 +7,12 @@ import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity, MousePointer2 } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity, MousePointer2, UserCircle } from "lucide-react";
 import { SearchModal } from "@/components/search/SearchModal";
 import { Spinner } from "@/components/ui/Spinner";
+import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
 import { createClient } from "@/lib/supabase/client";
+import type { PermissionKey } from "@/types";
 import { computeLayout } from "@/lib/layout";
 import type { MemoryType } from "@/types";
 
@@ -28,6 +30,7 @@ export default function TreePage() {
   const [memoryCounts, setMemoryCounts] = useState<Record<string, number>>({});
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => searchParams.get("welcome") === "1");
   const [selectMode, setSelectMode] = useState(false);
+  const [requestingPermission, setRequestingPermission] = useState<PermissionKey | null>(null);
 
   const supabase = createClient();
 
@@ -122,6 +125,9 @@ export default function TreePage() {
     );
   }
 
+  const isAdmin = member?.role === "admin";
+  const canEditTree = isAdmin || member?.can_edit_tree === true;
+
   return (
     <div className="h-screen flex flex-col bg-canvas">
       {/* Toolbar */}
@@ -162,35 +168,39 @@ export default function TreePage() {
           {/* Divider */}
           <div className="w-px h-6 bg-gray-200 mx-0.5" />
 
-          {/* Canvas tools group */}
-          <button
-            onClick={() => setSelectMode((s) => !s)}
-            className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] ${
-              selectMode
-                ? "bg-accent-pale border-accent-mid text-accent"
-                : "border-gray-300 text-gray-600 hover:bg-gray-50"
-            }`}
-            title={selectMode ? "Switch to pan mode" : "Switch to select mode"}
-          >
-            <MousePointer2 className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">{selectMode ? "Selecting" : "Select"}</span>
-          </button>
-          <button
-            onClick={handleAutoLayout}
-            disabled={layouting || people.length === 0}
-            className="hidden sm:flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
-            title={layouting ? "Laying out..." : "Auto Layout"}
-          >
-            <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden lg:inline">{layouting ? "Laying out..." : "Auto Layout"}</span>
-          </button>
+          {/* Canvas tools group — only for users who can edit the tree */}
+          {canEditTree && (
+            <>
+              <button
+                onClick={() => setSelectMode((s) => !s)}
+                className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] ${
+                  selectMode
+                    ? "bg-accent-pale border-accent-mid text-accent"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                }`}
+                title={selectMode ? "Switch to pan mode" : "Switch to select mode"}
+              >
+                <MousePointer2 className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{selectMode ? "Selecting" : "Select"}</span>
+              </button>
+              <button
+                onClick={handleAutoLayout}
+                disabled={layouting || people.length === 0}
+                className="hidden sm:flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
+                title={layouting ? "Laying out..." : "Auto Layout"}
+              >
+                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden lg:inline">{layouting ? "Laying out..." : "Auto Layout"}</span>
+              </button>
+            </>
+          )}
 
           {/* Divider */}
           <div className="w-px h-6 bg-gray-200 mx-0.5" />
 
           {/* Primary actions group */}
           <button
-            onClick={() => setShowAddPerson(true)}
+            onClick={() => canEditTree ? setShowAddPerson(true) : setRequestingPermission("can_edit_tree")}
             className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
             title="Add Person"
           >
@@ -198,7 +208,7 @@ export default function TreePage() {
             <span className="hidden sm:inline">Add Person</span>
           </button>
           <button
-            onClick={() => setShowAddRelationship(true)}
+            onClick={() => canEditTree ? setShowAddRelationship(true) : setRequestingPermission("can_edit_tree")}
             disabled={people.length < 2}
             className="hidden sm:flex items-center gap-1.5 border border-accent text-accent hover:bg-accent-pale text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
             title="Add Relationship"
@@ -210,11 +220,18 @@ export default function TreePage() {
           {/* Divider */}
           <div className="w-px h-6 bg-gray-200 mx-0.5" />
 
+          <button
+            onClick={() => router.push("/account")}
+            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            title="Your account"
+          >
+            <UserCircle className="w-4 h-4" />
+          </button>
           {member?.role === "admin" && (
             <button
               onClick={() => router.push("/settings")}
               className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              title="Settings"
+              title="Family settings"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -295,6 +312,15 @@ export default function TreePage() {
         people={people}
         onPersonClick={(personId) => router.push(`/person/${personId}`)}
       />
+
+      {requestingPermission && family && (
+        <RequestAccessModal
+          open={!!requestingPermission}
+          onClose={() => setRequestingPermission(null)}
+          permission={requestingPermission}
+          familyId={family.id}
+        />
+      )}
     </div>
   );
 }

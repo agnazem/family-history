@@ -11,6 +11,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import type { Memory, Person } from "@/types";
 import Image from "next/image";
+import Link from "next/link";
 
 const TYPE_ICONS = {
   audio: Mic,
@@ -19,11 +20,11 @@ const TYPE_ICONS = {
   note: PenLine,
 };
 
-const TYPE_COLORS = {
-  audio: "bg-purple-50 border-purple-200 text-purple-700",
-  photo: "bg-accent-pale border-accent-border text-accent",
-  document: "bg-green-50 border-green-200 text-green-700",
-  note: "bg-canvas border-accent-border text-accent",
+const TYPE_LABELS: Record<string, string> = {
+  audio: "Voice memory",
+  photo: "Photo",
+  document: "Document",
+  note: "Written note",
 };
 
 type TimelineEntry = Memory & { taggedPeople: Person[] };
@@ -62,6 +63,7 @@ export default function TimelinePage() {
           .from("memories")
           .select("*")
           .eq("family_id", family!.id)
+          .is("deleted_at", null)
           .order("created_at", { ascending: false }),
         supabase
           .from("memory_people")
@@ -126,8 +128,8 @@ export default function TimelinePage() {
 
   if (familyLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <p className="text-accent">Loading timeline...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[--canvas]">
+        <p className="text-[--ink-soft]">Loading timeline…</p>
       </div>
     );
   }
@@ -135,23 +137,25 @@ export default function TimelinePage() {
   const grouped = groupByYear(entries);
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-[--canvas]">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
         <button
           onClick={() => router.push("/tree")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6"
+          className="flex items-center gap-1.5 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to tree
         </button>
 
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">Timeline</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{family?.name}</p>
+        <div className="mb-10">
+          <h1 className="font-display text-[clamp(32px,5vw,48px)] font-normal text-[--ink] leading-[1.1] tracking-[-0.02em]">
+            Timeline
+          </h1>
+          <p className="text-sm text-[--ink-mute] mt-1">{family?.name}</p>
         </div>
 
         {entries.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-[--ink-mute]">
             <p className="mb-1">No memories recorded yet.</p>
             <p className="text-sm">Visit a family member's page to add the first memory.</p>
           </div>
@@ -159,45 +163,52 @@ export default function TimelinePage() {
           <div className="space-y-10">
             {grouped.map(([year, items]) => (
               <section key={year}>
-                <div className="flex items-center gap-3 mb-4">
-                  <span className={`font-display text-xl font-normal ${year === "unknown" ? "text-stone-400 italic" : "text-stone-800"}`}>
+                <div className="flex items-center gap-3 mb-5">
+                  <span className={`font-display text-2xl font-normal ${year === "unknown" ? "text-[--ink-mute] italic" : "text-[--ink]"}`}>
                     {year === "unknown" ? "Date unknown" : year}
                   </span>
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-xs text-gray-400">{items.length} {items.length === 1 ? "memory" : "memories"}</span>
+                  <div className="flex-1 h-px bg-[--rule]" />
+                  <span className="text-xs text-[--ink-mute] font-mono">
+                    {items.length} {items.length === 1 ? "memory" : "memories"}
+                  </span>
                 </div>
                 <div className="space-y-3">
                   {items.map((entry) => {
                     const Icon = TYPE_ICONS[entry.type];
-                    const colorCls = TYPE_COLORS[entry.type];
                     return (
                       <div
                         key={entry.id}
-                        className={`border rounded-xl p-4 ${colorCls}`}
+                        className="bg-[--surface] border border-[--rule] rounded-xl p-5 hover:border-[--gold] transition-colors"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex-shrink-0">
-                            <Icon className="w-4 h-4" />
-                          </div>
+                          <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-[--ink-mute]" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{entry.title}</p>
-                            <p className="text-xs opacity-70 mt-0.5">{formatDate(entry.created_at)}</p>
+                            <span className="eyebrow">{TYPE_LABELS[entry.type]}</span>
+                            <Link
+                              href={`/memory/${entry.id}`}
+                              className="block font-display text-[20px] leading-[1.2] font-normal text-[--ink] mt-0.5 hover:text-[--accent] transition-colors"
+                            >
+                              {entry.title}
+                            </Link>
+                            <p className="text-[13px] text-[--ink-mute] mt-0.5">
+                              {formatDate(entry.date_of_memory ?? entry.created_at)}
+                            </p>
 
                             {entry.type === "audio" && entry.storage_url && (
                               <button
                                 onClick={() => toggleAudio(entry)}
-                                className="flex items-center gap-1.5 mt-2 text-xs font-medium px-2.5 py-1.5 rounded-md border border-current opacity-80 hover:opacity-100 transition-opacity min-h-[32px]"
+                                className="flex items-center gap-1.5 mt-3 text-xs font-medium bg-[--accent] text-white px-3 py-1.5 rounded-lg hover:bg-[--accent-hover] transition-colors"
                               >
                                 {playingId === entry.id ? (
                                   <><Pause className="w-3.5 h-3.5" /> Pause</>
                                 ) : (
-                                  <><Play className="w-3.5 h-3.5" /> Play recording</>
+                                  <><Play className="w-3.5 h-3.5" /> Play</>
                                 )}
                               </button>
                             )}
 
                             {entry.type === "photo" && entry.storage_url && (
-                              <div className="mt-2 rounded-lg overflow-hidden">
+                              <div className="mt-3 rounded-lg overflow-hidden">
                                 <Image
                                   src={entry.storage_url}
                                   alt={entry.title}
@@ -213,7 +224,7 @@ export default function TimelinePage() {
                                 href={entry.storage_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 mt-2 text-xs font-medium opacity-80 hover:opacity-100"
+                                className="inline-flex items-center gap-1.5 mt-3 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors"
                               >
                                 <Download className="w-3.5 h-3.5" />
                                 Download file
@@ -221,17 +232,19 @@ export default function TimelinePage() {
                             )}
 
                             {entry.description && (
-                              <p className="text-sm mt-2 opacity-80 leading-relaxed">{entry.description}</p>
+                              <p className="text-[14px] leading-[1.5] text-[--ink-soft] mt-2">
+                                {entry.description}
+                              </p>
                             )}
 
                             {entry.taggedPeople.length > 0 && (
-                              <p className="flex items-center gap-1 text-xs mt-2 opacity-60">
+                              <p className="flex items-center gap-1.5 mt-2 text-[13px] text-[--ink-mute]">
                                 <Users className="w-3 h-3 flex-shrink-0" />
                                 {entry.taggedPeople.map((p) => (
                                   <button
                                     key={p.id}
                                     onClick={() => router.push(`/person/${p.id}`)}
-                                    className="hover:underline"
+                                    className="hover:text-[--ink] hover:underline transition-colors"
                                   >
                                     {p.first_name} {p.last_name}
                                   </button>

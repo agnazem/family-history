@@ -94,28 +94,61 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That person is already a member of this family." }, { status: 409 });
   }
 
+  const display_name = (targetUser.user_metadata?.full_name as string | undefined) ?? null;
   const { error } = await supabase
     .from("family_members")
-    .insert({ family_id: familyId, user_id: targetUser.id, role: "member" });
+    .insert({ family_id: familyId, user_id: targetUser.id, role: "member", display_name });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
 
-// PATCH /api/members — change a member's role
+// PATCH /api/members — change role/permissions (admin only) or display_name (self or admin)
 export async function PATCH(request: Request) {
-  const { familyId, userId, role } = await request.json();
-  if (!familyId || !userId || !role) {
+  const { familyId, userId, role, display_name, can_edit_tree, can_edit_memories } = await request.json();
+  if (!familyId || !userId) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
   const supabase = await createClient();
-  const { error: authError } = await requireAdmin(supabase, familyId);
-  if (authError) return authError;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: membership } = await supabase
+    .from("family_members")
+    .select("role")
+    .eq("family_id", familyId)
+    .eq("user_id", user.id)
+    .single();
+
+  const isAdmin = membership?.role === "admin";
+  const isSelf = user.id === userId;
+
+  if (!isAdmin && !isSelf) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (role !== undefined && !isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Permission toggles are admin-only
+  if ((can_edit_tree !== undefined || can_edit_memories !== undefined) && !isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (role !== undefined) updates.role = role;
+  if (display_name !== undefined) updates.display_name = display_name || null;
+  if (can_edit_tree !== undefined) updates.can_edit_tree = Boolean(can_edit_tree);
+  if (can_edit_memories !== undefined) updates.can_edit_memories = Boolean(can_edit_memories);
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
 
   const { error } = await supabase
     .from("family_members")
-    .update({ role })
+    .update(updates)
     .eq("family_id", familyId)
     .eq("user_id", userId);
 

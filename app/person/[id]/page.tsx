@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useMemories } from "@/lib/hooks/useMemories";
 import { Avatar } from "@/components/ui/Avatar";
 import { MemoryCard } from "@/components/folio/MemoryCard";
-import { MemoryModal } from "@/components/folio/MemoryModal";
 import { AddMemoryModal } from "@/components/folio/AddMemoryModal";
 import { PersonSummary } from "@/components/folio/PersonSummary";
 import { TellMeModal } from "@/components/folio/TellMeModal";
@@ -14,6 +13,8 @@ import { RelationshipModal } from "@/components/tree/RelationshipModal";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { AddRelatedPersonModal, type RelationIntent } from "@/components/folio/AddRelatedPersonModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
+import type { PermissionKey } from "@/types";
 import { Spinner } from "@/components/ui/Spinner";
 import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2, Mic } from "lucide-react";
 import { formatDate } from "@/lib/utils";
@@ -42,11 +43,15 @@ export default function PersonPage() {
   const [showAddRelationship, setShowAddRelationship] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<RelationIntent | null>(null);
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
-  const [selectedMemory, setSelectedMemory] = useState<import("@/types").Memory | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showTellMe, setShowTellMe] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [requestingPermission, setRequestingPermission] = useState<PermissionKey | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const isAdmin = currentMember?.role === "admin";
+  const canEditTree = isAdmin || currentMember?.can_edit_tree === true;
+  const canEditMemories = isAdmin || currentMember?.can_edit_memories === true;
   const supabase = createClient();
 
   const { memories, tagMap, loading: memoriesLoading, refetch: refetchMemories } = useMemories(id, person?.family_id ?? null);
@@ -162,24 +167,26 @@ export default function PersonPage() {
           <div className="flex items-start gap-4">
             <div className="relative group flex-shrink-0">
               <Avatar src={person.profile_photo_url} name={fullName} size="xl" />
-              <label
-                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                title="Change photo"
-              >
-                {uploadingPhoto ? (
-                  <span className="text-white text-xs">...</span>
-                ) : (
-                  <Camera className="w-6 h-6 text-white" />
-                )}
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoUpload}
-                  disabled={uploadingPhoto}
-                />
-              </label>
+              {canEditTree && (
+                <label
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  title="Change photo"
+                >
+                  {uploadingPhoto ? (
+                    <span className="text-white text-xs">...</span>
+                  ) : (
+                    <Camera className="w-6 h-6 text-white" />
+                  )}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhoto}
+                  />
+                </label>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
@@ -191,7 +198,7 @@ export default function PersonPage() {
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
-                    onClick={() => setShowTellMe(true)}
+                    onClick={() => canEditMemories ? setShowTellMe(true) : setRequestingPermission("can_edit_memories")}
                     className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover border border-accent-border hover:border-accent-mid bg-accent-pale px-3 py-1.5 rounded-lg transition-colors"
                     title="Tell me about this person"
                   >
@@ -199,13 +206,13 @@ export default function PersonPage() {
                     <span className="hidden sm:inline">Tell me about</span>
                   </button>
                   <button
-                    onClick={() => router.push(`/person/${id}/edit`)}
+                    onClick={() => canEditTree ? router.push(`/person/${id}/edit`) : setRequestingPermission("can_edit_tree")}
                     className="flex items-center gap-1.5 text-sm text-[--ink-mute] hover:text-accent border border-[--rule] hover:border-[--gold] px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit
                   </button>
-                  {currentMember?.role === "admin" && (
+                  {(isAdmin || (canEditTree && person.created_by === currentMember?.user_id && Date.now() - new Date(person.created_at).getTime() < 3600000)) && (
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={deleting}
@@ -257,7 +264,7 @@ export default function PersonPage() {
               {(["add_parent", "add_child", "add_sibling", "add_spouse"] as RelationIntent[]).map((intent) => (
                 <button
                   key={intent}
-                  onClick={() => setPendingIntent(intent)}
+                  onClick={() => canEditTree ? setPendingIntent(intent) : setRequestingPermission("can_edit_tree")}
                   className="flex items-center gap-1.5 border border-accent-border text-accent hover:bg-accent-pale text-xs px-2.5 py-1.5 rounded-lg transition-colors"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
@@ -267,7 +274,7 @@ export default function PersonPage() {
                 </button>
               ))}
               <button
-                onClick={() => setShowAddRelationship(true)}
+                onClick={() => canEditTree ? setShowAddRelationship(true) : setRequestingPermission("can_edit_tree")}
                 className="flex items-center gap-1.5 border border-[--rule] text-[--ink-mute] hover:bg-[--surface-alt] hover:border-[--gold] text-xs px-2.5 py-1.5 rounded-lg transition-colors"
                 title="Link to an existing family member"
               >
@@ -317,7 +324,7 @@ export default function PersonPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl font-normal text-[--ink]">Memories</h2>
             <button
-              onClick={() => setShowAddMemory(true)}
+              onClick={() => canEditMemories ? setShowAddMemory(true) : setRequestingPermission("can_edit_memories")}
               className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -344,7 +351,6 @@ export default function PersonPage() {
                     key={m.id}
                     memory={m}
                     taggedPeople={otherTagged}
-                    onClick={() => setSelectedMemory(m)}
                   />
                 );
               })}
@@ -362,12 +368,6 @@ export default function PersonPage() {
         onAdded={refetchMemories}
       />
 
-      <MemoryModal
-        memory={selectedMemory}
-        familyPeople={familyPeople}
-        onClose={() => setSelectedMemory(null)}
-        onChanged={() => { setSelectedMemory(null); refetchMemories(); }}
-      />
 
       <AddRelationshipPanel
         open={showAddRelationship}
@@ -387,6 +387,7 @@ export default function PersonPage() {
           setSelectedRelationship(null);
           loadRelationships(person.family_id);
         }}
+        canEdit={canEditTree}
       />
 
       {pendingIntent && (
@@ -432,6 +433,15 @@ export default function PersonPage() {
         error={deleteError}
         variant="danger"
       />
+
+      {requestingPermission && person && (
+        <RequestAccessModal
+          open={!!requestingPermission}
+          onClose={() => setRequestingPermission(null)}
+          permission={requestingPermission}
+          familyId={person.family_id}
+        />
+      )}
     </div>
   );
 }

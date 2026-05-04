@@ -19,12 +19,13 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
-    if (open) {
-      document.addEventListener("keydown", onKey);
-      closeRef.current?.focus();
-    }
+    if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (open) closeRef.current?.focus();
+  }, [open]);
 
   if (!open) return null;
 
