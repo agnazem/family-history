@@ -45,10 +45,12 @@ export async function POST(
   }
 
   if (text) {
-    await supabase.rpc("append_transcript_chunk", {
-      p_memory_id: memoryId,
-      p_text: text,
-    });
+    // Replace (not append) — we send the full accumulated audio each time,
+    // so this is always the complete transcript so far.
+    await supabase
+      .from("memories")
+      .update({ transcript: text })
+      .eq("id", memoryId);
   }
 
   return NextResponse.json({ text });
