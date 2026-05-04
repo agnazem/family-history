@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AudioPlayer, type AudioPlayerRef } from "@/components/folio/AudioPlayer";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatDate } from "@/lib/utils";
-import { Pencil, Check, X, Send, Trash2, Loader2, Users, Search } from "lucide-react";
+import { Pencil, Check, X, Send, Trash2, Loader2, Users, Search, RefreshCw } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
 import type { Memory, MemoryComment, Person } from "@/types";
 import { debounce } from "@/lib/utils";
@@ -574,6 +574,17 @@ export function MemoryDetailClient({
                       >
                         <Check className="w-3 h-3" />
                         Done
+                      </button>
+                    )}
+                    {/* Re-transcribe: lets editors regenerate an existing transcript with paragraph breaks */}
+                    {canEdit && memory.transcript_status === "ready" && memory.storage_url && !transcriptEditMode && !showLiveIndicator && (
+                      <button
+                        onClick={handleRetranscribe}
+                        disabled={retranscribing}
+                        className="p-1 text-[--ink-mute] hover:text-[--ink] disabled:opacity-40 transition-colors rounded"
+                        title="Re-run transcription"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${retranscribing ? "animate-spin" : ""}`} />
                       </button>
                     )}
                     {showLiveIndicator && (
