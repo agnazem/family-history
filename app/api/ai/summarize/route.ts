@@ -1,4 +1,5 @@
 import { anthropic } from "@/lib/anthropic";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 interface MemoryInput {
@@ -13,7 +14,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
 
-  const { personName, dob, dod, bio, memories } = await request.json() as {
+  const { personId, personName, dob, dod, bio, memories } = await request.json() as {
+    personId?: string;
     personName: string;
     dob: string | null;
     dod: string | null;
@@ -56,5 +58,12 @@ Return only the summary text, no preamble or explanation.`;
   });
 
   const summary = (message.content[0] as { type: string; text: string }).text.trim();
+
+  // Persist to DB server-side so it survives navigation
+  if (personId) {
+    const supabase = await createClient();
+    await supabase.from("people").update({ ai_summary: summary }).eq("id", personId);
+  }
+
   return NextResponse.json({ summary });
 }

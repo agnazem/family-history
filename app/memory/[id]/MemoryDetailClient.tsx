@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Pencil, Check, X, Send, Trash2, Loader2, Users, Search } from "lucide-react";
+import { Pencil, Check, X, Send, Trash2, Loader2, Users, Search } from "lucide-react";
+import { AppNav } from "@/components/ui/AppNav";
 import type { Memory, MemoryComment, Person } from "@/types";
 import { debounce } from "@/lib/utils";
 
@@ -240,7 +241,21 @@ export function MemoryDetailClient({
 
   async function handleRetranscribe() {
     setRetranscribing(true);
-    await fetch(`/api/recordings/${memory.id}/retranscribe`, { method: "POST" }).catch(() => {});
+    setMemory((prev) => ({ ...prev, transcript_status: "pending" }));
+    const res = await fetch(`/api/recordings/${memory.id}/retranscribe`, { method: "POST" }).catch(() => null);
+    if (res?.ok) {
+      const { data } = await supabase
+        .from("memories")
+        .select("transcript, transcript_status, transcript_draft, transcript_summary")
+        .eq("id", memory.id)
+        .single();
+      if (data) {
+        setMemory((prev) => ({ ...prev, ...data }));
+        if (data.transcript) setTranscriptDraft(data.transcript);
+      }
+    } else {
+      setMemory((prev) => ({ ...prev, transcript_status: "failed" }));
+    }
     setRetranscribing(false);
   }
 
@@ -289,18 +304,7 @@ export function MemoryDetailClient({
 
   return (
     <div className="min-h-screen bg-[--canvas]">
-      {/* Back nav */}
-      <header className="sticky top-0 z-10 bg-[--surface] border-b border-[--rule]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-12 flex items-center">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-        </div>
-      </header>
+      <AppNav />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         {/* Eyebrow */}
@@ -567,7 +571,7 @@ export function MemoryDetailClient({
           </div>
 
           {/* Sidebar — right, 280px, sticky */}
-          <aside className="hidden lg:block w-[280px] flex-shrink-0 sticky top-20">
+          <aside className="hidden lg:block w-[280px] flex-shrink-0 sticky top-16">
             {/* About this recording */}
             <div className="bg-[--surface] border border-[--rule] rounded-xl p-5 mb-4">
               <p className="eyebrow mb-3">About this recording</p>

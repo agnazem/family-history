@@ -5,6 +5,7 @@ import { Sparkles, Pencil, RefreshCw, Check, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Memory } from "@/types";
 
+
 interface PersonSummaryProps {
   personId: string;
   personName: string;
@@ -43,6 +44,7 @@ export function PersonSummary({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          personId,
           personName,
           dob,
           dod,
@@ -60,7 +62,6 @@ export function PersonSummary({
       const newSummary: string = data.summary;
       setSummary(newSummary);
       onSummaryChange?.(newSummary);
-      await supabase.from("people").update({ ai_summary: newSummary }).eq("id", personId);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to generate summary");
     }
