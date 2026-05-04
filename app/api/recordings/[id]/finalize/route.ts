@@ -1,6 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import type { TranscriptionSegment } from "openai/resources/audio/transcriptions";
+
+// Insert paragraph breaks between Whisper segments where there is a pause of
+// at least PAUSE_THRESHOLD seconds — these gaps correspond to natural topic or
+// breath transitions in conversational speech.
+const PAUSE_THRESHOLD = 1.5;
+
+function segmentsToText(segments: TranscriptionSegment[], fallback: string): string {
+  if (segments.length === 0) return fallback.trim();
+  let text = segments[0].text.trim();
+  for (let i = 1; i < segments.length; i++) {
+    const gap = segments[i].start - segments[i - 1].end;
+    text += (gap >= PAUSE_THRESHOLD ? "\n\n" : " ") + segments[i].text.trim();
+  }
+  return text;
+}
 
 const openai = new OpenAI();
 
@@ -44,9 +60,9 @@ export async function POST(
       const result = await openai.audio.transcriptions.create({
         file,
         model: "whisper-1",
-        response_format: "text",
+        response_format: "verbose_json",
       });
-      const finalTranscript = (typeof result === "string" ? result : "").trim();
+      const finalTranscript = segmentsToText(result.segments ?? [], result.text);
 
       await supabase
         .from("memories")
