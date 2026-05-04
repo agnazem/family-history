@@ -134,6 +134,9 @@ export function MemoryDetailClient({
 
   // Retranscription
   const [retranscribing, setRetranscribing] = useState(false);
+  const [confirmingRetranscribe, setConfirmingRetranscribe] = useState(false);
+  const [previousTranscript, setPreviousTranscript] = useState<string | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Summary
   const [summarizing, setSummarizing] = useState(false);
@@ -281,6 +284,8 @@ export function MemoryDetailClient({
   }
 
   async function handleRetranscribe() {
+    const savedTranscript = transcriptDraft;
+    setConfirmingRetranscribe(false);
     setRetranscribing(true);
     setMemory((prev) => ({ ...prev, transcript_status: "pending" }));
     const res = await fetch(`/api/recordings/${memory.id}/retranscribe`, { method: "POST" }).catch(() => null);
@@ -294,10 +299,29 @@ export function MemoryDetailClient({
         setMemory((prev) => ({ ...prev, ...data }));
         if (data.transcript) setTranscriptDraft(data.transcript);
       }
+      // Offer undo for 30 seconds in case the user wants to restore manual edits
+      if (savedTranscript) {
+        setPreviousTranscript(savedTranscript);
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        undoTimerRef.current = setTimeout(() => setPreviousTranscript(null), 30000);
+      }
     } else {
       setMemory((prev) => ({ ...prev, transcript_status: "failed" }));
     }
     setRetranscribing(false);
+  }
+
+  async function handleUndoRetranscribe() {
+    if (!previousTranscript) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    const restored = previousTranscript;
+    setPreviousTranscript(null);
+    setTranscriptDraft(restored);
+    setMemory((prev) => ({ ...prev, transcript: restored, transcript_status: "ready" }));
+    await supabase
+      .from("memories")
+      .update({ transcript: restored, transcript_draft: null, transcript_status: "ready" })
+      .eq("id", memory.id);
   }
 
   async function handleDelete() {
@@ -576,10 +600,10 @@ export function MemoryDetailClient({
                         Done
                       </button>
                     )}
-                    {/* Re-transcribe: lets editors regenerate an existing transcript with paragraph breaks */}
-                    {canEdit && memory.transcript_status === "ready" && memory.storage_url && !transcriptEditMode && !showLiveIndicator && (
+                    {/* Re-transcribe: opens inline confirmation before overwriting */}
+                    {canEdit && memory.transcript_status === "ready" && memory.storage_url && !transcriptEditMode && !showLiveIndicator && !confirmingRetranscribe && (
                       <button
-                        onClick={handleRetranscribe}
+                        onClick={() => setConfirmingRetranscribe(true)}
                         disabled={retranscribing}
                         className="p-1 text-[--ink-mute] hover:text-[--ink] disabled:opacity-40 transition-colors rounded"
                         title="Re-run transcription"
@@ -603,6 +627,42 @@ export function MemoryDetailClient({
                       </span>
                     )}
                   </div>
+
+                  {/* Retranscribe confirmation */}
+                  {confirmingRetranscribe && (
+                    <div className="flex items-center justify-between gap-3 mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                      <p className="text-[13px] text-amber-800 leading-snug">
+                        Re-transcribing will replace this transcript and remove any manual edits.
+                      </p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => setConfirmingRetranscribe(false)}
+                          className="text-[13px] text-[--ink-mute] hover:text-[--ink] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleRetranscribe}
+                          className="text-[13px] bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Re-transcribe
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Undo banner — visible for 30s after a successful re-transcription */}
+                  {previousTranscript !== null && (
+                    <div className="flex items-center justify-between gap-3 mb-4 bg-[--accent-soft] border border-[--rule] rounded-xl px-4 py-3">
+                      <p className="text-[13px] text-[--ink-soft]">Transcript updated from audio.</p>
+                      <button
+                        onClick={handleUndoRetranscribe}
+                        className="text-[13px] font-medium text-[--accent] hover:text-[--accent-hover] transition-colors flex-shrink-0"
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  )}
 
                   {/* Summary section for long transcripts */}
                   {isLong && (summarizing || hasSummary) && (
