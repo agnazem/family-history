@@ -18,10 +18,26 @@ export interface FamilyMember {
   user_id: string;
   role: UserRole;
   joined_at: string;
+  display_name: string | null;
+  can_edit_tree: boolean;
+  can_edit_memories: boolean;
   user?: {
     email: string;
     user_metadata: { full_name?: string };
   };
+}
+
+export type PermissionKey = "can_edit_tree" | "can_edit_memories";
+
+export interface PermissionRequest {
+  id: string;
+  family_id: string;
+  user_id: string;
+  permission: PermissionKey;
+  status: "pending" | "approved" | "denied";
+  created_at: string;
+  display_name?: string | null;
+  email?: string;
 }
 
 export interface Person {
@@ -61,12 +77,14 @@ export interface Memory {
   recorded_by: string;
   date_of_memory: string | null;
   created_at: string;
+  deleted_at: string | null;
   transcript: string | null;
   transcript_draft: string | null;
   duration_sec: number | null;
   recorded_at: string | null;
   recorded_at_note: string | null;
   transcript_status: TranscriptStatus;
+  transcript_summary: string | null;
   recorder?: {
     email: string;
     user_metadata: { full_name?: string };
