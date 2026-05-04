@@ -152,6 +152,9 @@ export function MemoryDetailClient({
 
   // Audio time tracking + transcript edit mode
   const [currentAudioTime, setCurrentAudioTime] = useState(0);
+  // Seed from stored value; AudioPlayer will update once the element resolves duration
+  // (old recordings often have duration_sec = null)
+  const [resolvedDuration, setResolvedDuration] = useState<number | null>(memory.duration_sec ?? null);
   const [transcriptEditMode, setTranscriptEditMode] = useState(false);
   const audioPlayerRef = useRef<AudioPlayerRef>(null);
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
@@ -327,12 +330,12 @@ export function MemoryDetailClient({
 
   // Paragraph-level seeking: split transcript and estimate timestamps by char position
   const paragraphs = useMemo(
-    () => buildParagraphs(memory.transcript ?? "", memory.duration_sec),
-    [memory.transcript, memory.duration_sec]
+    () => buildParagraphs(memory.transcript ?? "", resolvedDuration),
+    [memory.transcript, resolvedDuration]
   );
 
   // Which paragraph is currently active based on playback position
-  const canSeek = memory.type === "audio" && !!memory.storage_url && !!memory.duration_sec;
+  const canSeek = memory.type === "audio" && !!memory.storage_url && !!resolvedDuration;
   const activeParagraphIndex = canSeek && paragraphs.length > 0
     ? paragraphs.reduce<number>((best, para, i) => para.startTime <= currentAudioTime ? i : best, 0)
     : -1;
@@ -430,6 +433,7 @@ export function MemoryDetailClient({
               src={memory.storage_url}
               playbackRate={playbackRate}
               onTimeUpdate={setCurrentAudioTime}
+              onDurationChange={setResolvedDuration}
               className="text-[--accent]"
             />
             {memory.duration_sec && (

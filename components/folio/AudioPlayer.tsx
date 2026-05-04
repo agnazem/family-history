@@ -19,10 +19,11 @@ interface AudioPlayerProps {
   className?: string;
   playbackRate?: number;
   onTimeUpdate?: (time: number) => void;
+  onDurationChange?: (duration: number) => void;
 }
 
 export const AudioPlayer = forwardRef<AudioPlayerRef, AudioPlayerProps>(
-  function AudioPlayer({ src, className = "", playbackRate = 1, onTimeUpdate }, ref) {
+  function AudioPlayer({ src, className = "", playbackRate = 1, onTimeUpdate, onDurationChange }, ref) {
     const [playing, setPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(NaN);
@@ -30,6 +31,8 @@ export const AudioPlayer = forwardRef<AudioPlayerRef, AudioPlayerProps>(
     // Keep latest onTimeUpdate in a ref so the audio event handler doesn't go stale
     const onTimeUpdateRef = useRef(onTimeUpdate);
     useEffect(() => { onTimeUpdateRef.current = onTimeUpdate; }, [onTimeUpdate]);
+    const onDurationChangeRef = useRef(onDurationChange);
+    useEffect(() => { onDurationChangeRef.current = onDurationChange; }, [onDurationChange]);
 
     useImperativeHandle(ref, () => ({
       seekTo(time: number) {
@@ -60,6 +63,7 @@ export const AudioPlayer = forwardRef<AudioPlayerRef, AudioPlayerProps>(
       audio.ondurationchange = () => {
         if (isFinite(audio.duration) && audio.duration > 0) {
           setDuration(audio.duration);
+          onDurationChangeRef.current?.(audio.duration);
           audio.currentTime = 0;
         }
       };
