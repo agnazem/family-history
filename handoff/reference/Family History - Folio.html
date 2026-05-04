@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Family History — Folio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=DM+Sans:ital,wght@0,300..700;1,300..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #efece6; }
+  body { font-family: "DM Sans", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="primitives.jsx"></script>
+<script type="text/babel" src="screens/design-system.jsx"></script>
+<script type="text/babel" src="screens/home.jsx"></script>
+<script type="text/babel" src="screens/person.jsx"></script>
+<script type="text/babel" src="screens/tree.jsx"></script>
+<script type="text/babel" src="screens/memory.jsx"></script>
+<script type="text/babel" src="screens/record.jsx"></script>
+<script type="text/babel" src="screens/mobile.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const Canvas = window.DesignCanvas;
+const Sec = window.DCSection;
+const Art = window.DCArtboard;
+
+function App() {
+  return (
+    <Canvas>
+      <Sec id="overview" title="Folio · Family History" subtitle="Editorial direction built on the existing Fraunces + DM Sans brand. Warmer, more inviting, photo-led, with italic serif flourishes throughout. Pan around or click expand on any artboard to focus.">
+        <Art id="sys" label="Design system — color, type, components" width={1100} height={2100}><DesignSystemBoard direction="hearth"/></Art>
+      </Sec>
+
+      <Sec id="desktop" title="Desktop screens" subtitle="The four core surfaces — home, person, tree, and a single memory.">
+        <Art id="home" label="Home — invitation, not feed"          width={1280} height={1100}><HomeBoard direction="hearth"/></Art>
+        <Art id="per"  label="Person profile — Eleanor Marcaccio"   width={1280} height={1500}><PersonBoard direction="hearth"/></Art>
+        <Art id="tree" label="Tree — four generations, hairline-led" width={1500} height={900}><TreeBoard direction="hearth"/></Art>
+        <Art id="mem"  label="Memory — story player + transcript"   width={1280} height={1500}><MemoryDetailBoard/></Art>
+      </Sec>
+
+      <Sec id="record" title="Recording flow" subtitle="The phone-down-on-the-table moment. Live transcription, gentle next-prompts, auto-detected mentions.">
+        <Art id="rec" label="Mid-record — live transcript & detected people" width={1280} height={840}><RecordBoard/></Art>
+      </Sec>
+
+      <Sec id="mobile" title="Mobile" subtitle="The most important contexts are mobile — visiting Grandma, capturing a story on the spot.">
+        <Art id="m-home" label="Mobile · Home"   width={420} height={900}>
+          <window.IOSDevice width={402} height={874} dark={false}><MobileHome/></window.IOSDevice>
+        </Art>
+        <Art id="m-rec"  label="Mobile · Record" width={420} height={900}>
+          <window.IOSDevice width={402} height={874} dark={false}><MobileRecord/></window.IOSDevice>
+        </Art>
+      </Sec>
+    </Canvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

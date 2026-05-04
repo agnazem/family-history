@@ -1,10 +1,22 @@
 # Folio — Implementation Handoff
 
-This document is the source of truth for shipping the Folio visual direction and the two highest-leverage features behind it. It is structured in three phases. **Ship phase 1 alone first.** Phases 2 and 3 are independent and can ship in either order after that.
+This document is the source of truth for the Folio visual direction and the features behind it. The visual reference for everything below is `Family History — Folio.html` in this project. When in doubt, open it and read the JSX in `screens/`. Spec is canonical when it conflicts with the mock; the mock is canonical when this doc is silent.
 
-The visual reference for everything below is `Family History — Folio.html` in this project. When in doubt, open it and read the JSX in `screens/`. Spec is canonical when it conflicts with the mock; the mock is canonical when this doc is silent.
+Companion file: `handoff/tokens.css` — drop-in design tokens.
 
-Companion file: `handoff/tokens.css` — drop-in design tokens. Use it as your starting `globals.css` patch.
+## Status (as of May 2026)
+
+**Phase 1 — Visual refresh — ✅ SHIPPED.**
+Warm amber tokens, Fraunces 400 / bigger sizes / DM Mono eyebrows, `.eyebrow` / `.italic-flourish` / `.dateline` utilities, tree nodes + person page header + memory cards restyled, hairline + `hover:border-[--gold]` interactions throughout.
+
+**Phase 2 — Memory detail + audio pipeline — ✅ SHIPPED.**
+`/memory/[id]` server-rendered route with OG tags, custom audio player (1x/1.5x/2x), live Whisper transcription with two-pass finalizer, editable transcript with debounced autosave, person tagging, threaded comments, audio/photo/document/note memory types. Bonus surfaces shipped alongside: `/timeline`, `/activity`, "Tell me about" recording flow on person pages, AI-generated person summaries.
+
+**Phase 2.5 — Home page — ⏳ NEXT.** Spec below. Depends on Phase 2's `/memory/[id]` route, which exists.
+
+**Phase 3 — Sunday prompt — ⏳ AFTER 2.5.** Spec below. Depends on Phase 2.5's prompt card surface.
+
+The original Phase 1 / Phase 2 specs are preserved below for reference and for re-derivation if anything needs to be revisited; treat them as historical unless something on those surfaces is being explicitly reworked.
 
 ---
 
@@ -12,7 +24,9 @@ Companion file: `handoff/tokens.css` — drop-in design tokens. Use it as your s
 
 **Goal:** the app feels like Folio without changing any flows, routes, or data. Pure presentational diff.
 
-**Out of scope:** new pages, new components, new fields, new endpoints. If you find yourself adding a `useState`, you're off-track.
+**In scope:** restyling pages and components that already exist in the repo — `app/page.tsx` (home), `app/tree/page.tsx`, `app/person/[id]/page.tsx`, `components/MemoryCard.tsx`, `components/PersonChip.tsx`, plus tokens. Editing markup and classes inside these files is the entire job.
+
+**Out of scope:** new *routes*, new components, new fields, new endpoints, new state. If you find yourself creating a file under `app/` or `components/` that didn't exist before, stop — you're off-track. (Restyling `app/page.tsx` is fine and required; *creating* a new page is not.)
 
 ### 1.1 Tokens
 
@@ -54,10 +68,8 @@ For each existing component, here's the literal diff to make. File paths assume 
 - Avatar: 40px circle, `border border-[--rule]`. No ring on hover.
 - Name: DM Sans 15 medium. **Relationship line** below: Fraunces italic 13, `text-[--ink-soft]` ("her grandmother", "your uncle").
 
-**`app/page.tsx` (Home)**
-- Hero block at top: a single Fraunces sentence, 56–64px, 600px max-width. Pull copy from `screens/home.jsx` in this project — that's the canonical voice.
-- The "Sunday prompt" card stays as a simple bordered surface with a quoted question in Fraunces italic. (Phase 3 wires it to real data; for now, hardcode one prompt.)
-- Recent stories: 3-column grid → 2-column at `lg`, 1-column at `md`. Bigger cards, fewer per row.
+**`app/page.tsx` (Home) — deferred from Phase 1.**
+Home was not part of the shipped Phase 1 restyle. The page exists as a placeholder. **See Phase 2.5 below for the full build spec.** Phase 1's tokens and utilities are prerequisites, and they're done.
 
 **`app/tree/page.tsx`**
 - Background `bg-[--canvas]`, no other change to the `@xyflow/react` graph itself.
@@ -70,6 +82,8 @@ For each existing component, here's the literal diff to make. File paths assume 
 - Memory list reuses `MemoryCard` from above.
 
 **Top nav / toolbar:** no changes this phase. (The TODOs file flags a redesign — defer.)
+
+**Home (`app/page.tsx`):** deferred — see Phase 2.5.
 
 ### 1.3 What to QA before shipping phase 1
 
@@ -263,6 +277,129 @@ Keep both opus (small, our canonical) and mp3 (compatibility). Transcode in the 
 - Speaker diarization (who said what across multiple voices) — wait for a model that can do it well on consumer audio
 - Translation / non-English transcription — Whisper handles it but the UX needs language detection and fallback flows
 - "Smart summary" of long recordings — defer until usage shows demand
+
+---
+
+## Phase 2.5 — Home page (target: 3–5 days)
+
+**Goal:** build the Home surface from scratch. Phase 1's tokens, type, and component restyles are shipped; Phase 2's `/memory/[id]` route exists. Home is the missing connector — the surface that orients the user, surfaces recent activity, and routes them into recording or reading.
+
+**Status of the route today:** `app/page.tsx` is a placeholder. This phase replaces it.
+
+**Why now:** every other surface assumes a Home that points to it. Without this, the app has no front door — users land on whatever was last open or on the auth callback. The Sunday prompt feature (Phase 3) also needs a card slot here to live in, so this must ship first.
+
+The visual reference is `screens/home.jsx` (desktop) and the `MobileHome` artboard in the same file (mobile). Read that file alongside this section; it is the visual spec.
+
+### 2.5.1 Page composition (desktop)
+
+Top to bottom, inside the existing app shell:
+
+1. **Greeting hero** (no card surface, no border — sits directly on `--canvas`):
+   - Eyebrow: `<weekday> · <day> <month> <year> · <h:mm am/pm>` in DM Mono caps. Compute server-side from the request's resolved timezone; do not hydrate from `new Date()` on the client (avoids a flash of the wrong day at midnight rollover).
+   - Headline: Fraunces 56–72px, weight 400, line-height 1.04, tracking -0.025em, two lines max. Structure: `Good morning, <FirstName>. <Subject> hasn't been heard from in <N days>.` See §2.5.2 for how to compute the subject and the days number.
+   - Action row: three buttons in a flex row, 12px gap. **Record a story** (primary, mic icon, links to the Phase 2 recording flow), **Add a photo** (ghost, photo icon), **Ask <subject> a question →** (quiet/text-only, no icon, links to the Phase 2 "Tell me about" flow scoped to that person). The third button's label uses the same subject name as the headline.
+
+2. **Sunday prompt card** (only renders if today's prompt exists — Phase 3 backs this with real data; for 2.5, hardcode one prompt so the slot is real):
+   - Surface: `bg-[--accent-soft]` with a soft top-down gradient to transparent, 28px padding, hairline border.
+   - Eyebrow in `--accent` color: `PROMPT FOR TODAY`.
+   - Question: Fraunces 28px, italic flourish on the most evocative phrase (in the mock: *"childhood kitchen"*), wrapped in proper smart quotes.
+   - Helper line below in `--ink-soft`, 14px: "One question, every Sunday. Three minutes of audio is plenty."
+   - **Begin** button on the right (accent fill, mic icon).
+
+3. **Recently told** section:
+   - Section header: Fraunces italic 28px "Recently told" + a hairline rule that fills remaining width + a DM Mono caps label "THIS WEEK" on the right. The rule is a separator, not a border on either heading.
+   - Rows: render `StoryRow` from the mock — 64px thumbnail, kind eyebrow + duration, title, byline (`<Italic>by</Italic> · era·place`), waveform (audio only), relative when, kebab menu. Hover: border tint to `--gold`, no shadow lift. Click anywhere on the row navigates to `/memory/[id]` (the Phase 2 route).
+   - Limit: 4–6 rows. Below that, a quiet text link "See all <N> memories →" that goes to `/memories`.
+
+4. **Sidebar (right column, desktop only — hidden under `lg`):**
+   - **Family contributors** card: eyebrow "FAMILY · N CONTRIBUTORS", a wrapped row of 40px avatars (overflow renders as a `+N` chip in the same shape), then a 2-line summary in body copy with two italic name flourishes ("*Eleanor* contributed 23 memories. *Michael* uploaded 47 photos last month."). Pull the top two contributors from the last 30 days.
+   - **Coming up** card: eyebrow "COMING UP", then 3 rows. Each row: a fixed 76px DM Mono caps date column in `--accent`, then a title + subtitle. Sources: upcoming birthdays/anniversaries derived from `Person` dates (compute server-side; show next 90 days). Calendar integration and family events are out of scope — if there are fewer than 3 derivable rows, show 1–2 and let the card breathe.
+   - **The archive · at a glance** card: eyebrow, then a 2×2 grid of stats. Each stat is Fraunces 32px number + DM Mono caps label below. The four stats: total memories, total people, total audio duration (humanized — "14h", "3h 20m"), earliest year on record (the smallest `birthYear` or `Memory.recordedAt` year across the tree).
+
+Page layout: 1.6fr / 1fr two-column grid at desktop, 40px gap, 40px page padding. Stacks at `lg` and below; sidebar disappears below `768px` (see §2.5.4).
+
+### 2.5.2 Greeting logic
+
+The headline is the most opinionated thing on the page. Spec:
+
+- **First name:** the logged-in user's preferred display name. Fall back to email-local-part if unset.
+- **Time-of-day greeting:** `Good morning` (before 12pm), `Good afternoon` (12–5pm), `Good evening` (5pm–4am), `Up early` (4–6am). All times in user's local timezone.
+- **Subject** (the italic name in the headline): the *eldest living relative in the user's tree who has not contributed a memory in the longest stretch*. Tiebreak by closeness in the tree (parents/grandparents first). Use their relationship-name to the viewer ("Grandma", "Dad", "Aunt Rosa") — not their given name — pulled from `Person.relationshipLabel` if present, else the given name. If the user is the eldest in the tree or no living relatives have been quiet > 7 days, the subject becomes "the family" and the second clause becomes "have new stories to tell — *N* this week."
+- **N days:** `floor((now - lastContributionAt) / 1d)` for that subject. Floor so "17 days" doesn't tick to "18 days" mid-page.
+
+Edge cases:
+- New user, empty tree: skip the second clause entirely. Headline reads `Good morning, <name>. Let's start with one story.` and the primary CTA changes to "Add your first person" (links to `/tree?add=1`).
+- Subject contributed today: skip the headline subject and render `Good morning, <name>. Anything to add today?`
+- Unknown timezone: default to the user's account timezone, then to UTC. Never throw.
+
+Treat this whole computation as one server-side function — `getHomeGreeting(userId)` returning `{ eyebrow, greeting, subjectLabel, subjectPersonId, daysSilent, ctas }` — and pass it as a single prop. Do not let the markup compute it inline. The `subjectPersonId` lets the "Ask <subject> a question" CTA route into the Phase 2 "Tell me about" flow without a second lookup.
+
+### 2.5.3 Data shape
+
+Build one server query that hydrates the page. Sketch:
+
+```ts
+type HomeData = {
+  greeting: {
+    eyebrow: string;          // "Sunday · 03 May 2026 · 9:42 am"
+    salutation: string;       // "Good morning, Jamie."
+    subject: string | null;   // "Grandma" | null when empty-tree path
+    subjectPersonId: string | null;
+    daysSilent: number | null;
+    ctas: Array<{ id: 'record' | 'photo' | 'ask'; label: string; href: string }>;
+  };
+  prompt: { id: string; question: string; helper: string } | null;
+  recentMemories: Array<{
+    id: string;
+    title: string;
+    kind: 'audio' | 'video' | 'photo' | 'doc';
+    durationLabel: string;    // "4:18" | "12 photos" | "3 pages"
+    byName: string;           // "Eleanor M."
+    era: string;              // "1947 · Brooklyn"
+    when: string;             // "Yesterday" | "Wed" — pre-formatted server-side
+    waveformPeaks?: number[]; // audio only, 28 normalized peaks 0–1
+  }>;
+  contributors: {
+    total: number;
+    avatars: Array<{ id: string; initials: string; imageUrl?: string }>;
+    summary: { topName: string; topCount: number; secondName: string; secondCount: number };
+  };
+  upcoming: Array<{ when: string; what: string; sub: string }>;
+  archive: { memories: number; people: number; audioHumanized: string; earliestYear: number };
+};
+```
+
+Fetch in a single `loader`/`getServerSideProps`/equivalent — do not waterfall. The mobile variant uses a subset of this same payload (greeting + recentMemories + prompt only).
+
+### 2.5.4 Components to create
+
+- `components/home/GreetingHero.tsx`
+- `components/home/SundayPromptCard.tsx` (export the inner shell separately so Phase 3 can reuse it on `/prompts/[id]`)
+- `components/home/StoryRow.tsx` (note: this is the home variant — distinct from `MemoryCard`. Don't try to unify them; they have different information density and hover affordances.)
+- `components/home/ContributorsCard.tsx`
+- `components/home/UpcomingCard.tsx`
+- `components/home/ArchiveStatsCard.tsx`
+
+Keep each file under 150 lines. Compose them in `app/page.tsx`; that file should read like a document outline.
+
+### 2.5.5 Mobile Home
+
+Reference: the `MobileHome` artboard in `screens/home.jsx`.
+
+- Below `768px`: hide the contributors / upcoming / archive sidebar entirely. Those move to a separate `/family` route in a later phase.
+- Greeting hero shrinks to 36–44px headline, single line if it fits, two if not. Eyebrow stays full-size.
+- The action row becomes a 2×2 grid: Record (primary, full-width tall), Add photo, Ask, and a fourth quiet "Today's prompt →" tile that scrolls to the prompt card.
+- Story rows lose the waveform on the right (audio rows still show the play affordance on the thumbnail). Tap target ≥ 64px tall.
+- Sticky bottom-anchored Record button appears once the user scrolls past the hero — same primary style, mic icon, 56px tall, safe-area inset respected.
+
+### 2.5.6 What to QA before shipping phase 2.5
+
+1. SSR: view-source shows the greeting and recent memories — no client-side flash.
+2. Greeting: empty-tree, all-quiet, subject-contributed-today, and Tokyo-timezone cases all render the right copy. Snapshot tests for each.
+3. The "Ask Grandma a question →" CTA actually opens the Phase 2 "Tell me about" flow scoped to the right person.
+4. Story rows route to `/memory/[id]` (the Phase 2 route) and back-link works.
+5. Mobile sticky record button respects iOS safe-area insets and doesn't overlap the last story row at scroll-bottom.
+6. Lighthouse: TTFB < 400ms on Home with 200 memories seeded.
 
 ---
 
