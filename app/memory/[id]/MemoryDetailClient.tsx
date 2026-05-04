@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { AudioPlayer } from "@/components/folio/AudioPlayer";
+import { AudioPlayer, type AudioPlayerRef } from "@/components/folio/AudioPlayer";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatDate } from "@/lib/utils";
 import { Pencil, Check, X, Send, Trash2, Loader2, Users, Search } from "lucide-react";
@@ -49,6 +49,38 @@ const TYPE_LABELS: Record<string, string> = {
   document: "DOCUMENT",
   note: "WRITTEN NOTE",
 };
+
+function fmtTime(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+interface TranscriptParagraph {
+  text: string;
+  startTime: number;
+}
+
+function buildParagraphs(transcript: string, durationSec: number | null): TranscriptParagraph[] {
+  if (!transcript.trim()) return [];
+  const dur = durationSec ?? 0;
+  const total = transcript.length;
+  // Prefer double-newline splits; fall back to single newlines (Whisper rarely adds double breaks)
+  const parts = /\n\n/.test(transcript)
+    ? transcript.split(/\n\n+/)
+    : transcript.split(/\n/);
+  let searchFrom = 0;
+  const result: TranscriptParagraph[] = [];
+  for (const part of parts) {
+    const text = part.trim();
+    if (!text) { searchFrom += part.length + 1; continue; }
+    const idx = transcript.indexOf(text, searchFrom);
+    const startTime = dur > 0 && total > 0 ? (idx / total) * dur : 0;
+    result.push({ text, startTime });
+    searchFrom = idx + text.length;
+  }
+  return result;
+}
 
 export function MemoryDetailClient({
   memory: initialMemory,
@@ -117,6 +149,12 @@ export function MemoryDetailClient({
 
   // Playback speed
   const [playbackRate, setPlaybackRate] = useState(1);
+
+  // Audio time tracking + transcript edit mode
+  const [currentAudioTime, setCurrentAudioTime] = useState(0);
+  const [transcriptEditMode, setTranscriptEditMode] = useState(false);
+  const audioPlayerRef = useRef<AudioPlayerRef>(null);
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to realtime transcript updates during live recording
   useEffect(() => {
@@ -287,6 +325,25 @@ export function MemoryDetailClient({
     setSubmittingComment(false);
   }
 
+  // Paragraph-level seeking: split transcript and estimate timestamps by char position
+  const paragraphs = useMemo(
+    () => buildParagraphs(memory.transcript ?? "", memory.duration_sec),
+    [memory.transcript, memory.duration_sec]
+  );
+
+  // Which paragraph is currently active based on playback position
+  const canSeek = memory.type === "audio" && !!memory.storage_url && !!memory.duration_sec;
+  const activeParagraphIndex = canSeek && paragraphs.length > 0
+    ? paragraphs.reduce<number>((best, para, i) => para.startTime <= currentAudioTime ? i : best, 0)
+    : -1;
+
+  // Scroll the active paragraph into view while audio plays (no-op if already visible)
+  useEffect(() => {
+    if (transcriptEditMode || activeParagraphIndex < 0 || !transcriptContainerRef.current) return;
+    const el = transcriptContainerRef.current.querySelector<HTMLElement>(`[data-para="${activeParagraphIndex}"]`);
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [activeParagraphIndex, transcriptEditMode]);
+
   const filteredPeople = tagSearch.trim()
     ? allPeople.filter((p) =>
         `${p.first_name} ${p.last_name}`.toLowerCase().includes(tagSearch.toLowerCase())
@@ -369,8 +426,10 @@ export function MemoryDetailClient({
               </div>
             </div>
             <AudioPlayer
+              ref={audioPlayerRef}
               src={memory.storage_url}
               playbackRate={playbackRate}
+              onTimeUpdate={setCurrentAudioTime}
               className="text-[--accent]"
             />
             {memory.duration_sec && (
@@ -485,13 +544,33 @@ export function MemoryDetailClient({
               const wordCount = memory.transcript ? memory.transcript.trim().split(/\s+/).length : 0;
               const isLong = memory.transcript_status === "ready" && wordCount >= 300;
               const hasSummary = !!memory.transcript_summary;
+              // Show clickable paragraphs when: audio with duration, transcript ready, not editing
+              const showClickable = canSeek && memory.transcript_status === "ready" && paragraphs.length > 0 && !transcriptEditMode;
+              // Show textarea when: canEdit and (editing mode OR no transcript yet)
+              const showTextarea = canEdit && (transcriptEditMode || memory.transcript_status === "none");
 
               return (
                 <>
                   <div className="flex items-center gap-2 mb-4">
                     <p className="eyebrow">Transcript</p>
-                    {canEdit && memory.transcript_status === "ready" && (
-                      <Pencil className="w-3 h-3 text-[--ink-mute]" />
+                    {/* Edit/done toggle for canEdit users when transcript is ready */}
+                    {canEdit && memory.transcript_status === "ready" && !transcriptEditMode && !showLiveIndicator && (
+                      <button
+                        onClick={() => setTranscriptEditMode(true)}
+                        className="p-1 text-[--ink-mute] hover:text-[--ink] transition-colors rounded"
+                        title="Edit transcript"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                    {canEdit && transcriptEditMode && (
+                      <button
+                        onClick={() => { commitTranscript(); setTranscriptEditMode(false); }}
+                        className="flex items-center gap-1 text-[10px] font-mono text-[--gold] hover:text-[--ink] transition-colors"
+                      >
+                        <Check className="w-3 h-3" />
+                        Done
+                      </button>
                     )}
                     {showLiveIndicator && (
                       <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.06em] text-[--gold]">
@@ -537,24 +616,67 @@ export function MemoryDetailClient({
                   {/* Full transcript — always visible if short, collapsible if long */}
                   {(!isLong || !hasSummary || summaryExpanded) && (
                     <>
-                      {memory.transcript_status === "ready" || memory.transcript_status === "none" ? (
-                        canEdit ? (
-                          <textarea
-                            value={transcriptDraft}
-                            onChange={handleTranscriptChange}
-                            onBlur={commitTranscript}
-                            placeholder={memory.transcript_status === "none" ? "No transcript yet. You can type one here." : ""}
-                            rows={Math.max(12, transcriptDraft.split("\n").length + 2)}
-                            className="w-full min-h-[20rem] text-[17px] leading-[1.55] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
-                          />
-                        ) : (
-                          <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
-                            {memory.transcript || <span className="text-[--ink-mute] italic">No transcript yet.</span>}
-                          </p>
-                        )
-                      ) : (
+                      {/* Live / streaming: plain text only */}
+                      {showLiveIndicator && (
                         <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
                           {memory.transcript || <span className="text-[--ink-mute] italic">Transcribing…</span>}
+                        </p>
+                      )}
+
+                      {/* Clickable paragraph view — audio memories with a ready transcript */}
+                      {!showLiveIndicator && showClickable && (
+                        <div ref={transcriptContainerRef} className="space-y-1 -mx-3">
+                          {paragraphs.map((para, i) => {
+                            const isActive = i === activeParagraphIndex;
+                            return (
+                              <div
+                                key={i}
+                                data-para={i}
+                                onClick={() => audioPlayerRef.current?.seekTo(para.startTime)}
+                                className={`group relative rounded-lg px-3 py-2 cursor-pointer transition-colors ${
+                                  isActive
+                                    ? "bg-[--accent-soft]"
+                                    : "hover:bg-[--surface-alt]"
+                                }`}
+                              >
+                                <span
+                                  className={`block font-mono text-[10px] tracking-[0.04em] mb-1 transition-opacity ${
+                                    isActive
+                                      ? "text-[--accent] opacity-100"
+                                      : "text-[--gold] opacity-0 group-hover:opacity-100"
+                                  }`}
+                                >
+                                  {fmtTime(para.startTime)}
+                                </span>
+                                <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                                  {para.text}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Editable textarea */}
+                      {!showLiveIndicator && showTextarea && (
+                        <textarea
+                          value={transcriptDraft}
+                          onChange={handleTranscriptChange}
+                          onBlur={commitTranscript}
+                          placeholder={memory.transcript_status === "none" ? "No transcript yet. You can type one here." : ""}
+                          rows={Math.max(12, transcriptDraft.split("\n").length + 2)}
+                          className="w-full min-h-[20rem] text-[17px] leading-[1.55] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
+                        />
+                      )}
+
+                      {/* Plain text — non-audio memories or when audio has no duration yet */}
+                      {!showLiveIndicator && !showClickable && !showTextarea && (
+                        <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                          {memory.transcript || (
+                            <span className="text-[--ink-mute] italic">
+                              {memory.transcript_status === "none" ? "No transcript yet." : "Transcribing…"}
+                            </span>
+                          )}
                         </p>
                       )}
                     </>
