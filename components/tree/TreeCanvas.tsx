@@ -54,7 +54,7 @@ function buildEdges(relationships: Relationship[]): Edge[] {
         target: rel.person_b_id,
         sourceHandle: "right",
         targetHandle: "left",
-        type: "smoothstep",
+        type: "default",
         style: EDGE_STYLES.parent_child,
         markerEnd: { type: MarkerType.ArrowClosed, color: "#E0D2BB" },
       });
@@ -219,6 +219,7 @@ export function TreeCanvas({
         <Background color="#E0D2BB" gap={24} size={1} />
         <Controls />
         <MiniMap
+          pannable
           nodeColor={(n) => {
             if (n.type === "generationHeader") return "transparent";
             const d = n.data as unknown as PersonNodeData;
