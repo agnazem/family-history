@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Mic, Square, Play, Pause, Trash2, Loader2 } from "lucide-react";
 
 interface AudioRecorderProps {
@@ -31,14 +31,17 @@ export function AudioRecorder({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seqRef = useRef(0);
+  const recordingIdRef = useRef(recordingId);
+  useEffect(() => { recordingIdRef.current = recordingId; }, [recordingId]);
 
   const postChunk = useCallback(async (chunk: Blob, seq: number) => {
-    if (!recordingId || chunk.size < 100) return;
+    const rid = recordingIdRef.current;
+    if (!rid || chunk.size < 100) return;
     const fd = new FormData();
     fd.append("chunk", chunk);
     fd.append("sequence", String(seq));
-    await fetch(`/api/recordings/${recordingId}/chunk`, { method: "POST", body: fd }).catch(() => {});
-  }, [recordingId]);
+    await fetch(`/api/recordings/${rid}/chunk`, { method: "POST", body: fd }).catch(() => {});
+  }, []);
 
   async function startRecording() {
     setMicError(null);
@@ -68,7 +71,10 @@ export function AudioRecorder({
       allChunks.current.push(e.data);
       const seq = seqRef.current++;
       setChunkSeq(seq);
-      postChunk(e.data, seq);
+      // Send full accumulated blob — later chunks are stream fragments without
+      // container headers, so Whisper can't decode them standalone.
+      const fullBlob = new Blob(allChunks.current, { type: mimeType || "audio/webm" });
+      postChunk(fullBlob, seq);
     };
 
     mr.onstop = () => {

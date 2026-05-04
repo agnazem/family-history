@@ -6,13 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Pencil, Check, X, Send, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Pencil, Check, X, Send, Trash2, Loader2, Users, Search } from "lucide-react";
 import type { Memory, MemoryComment, Person } from "@/types";
 import { debounce } from "@/lib/utils";
 
 interface Props {
   memory: Memory;
   taggedPeople: (Person & { role: string })[];
+  allPeople: Person[];
+  familyMembers: { user_id: string; display_name: string | null }[];
   comments: MemoryComment[];
   memberNames: Record<string, string>;
   recorderName: string;
@@ -49,10 +51,12 @@ const TYPE_LABELS: Record<string, string> = {
 
 export function MemoryDetailClient({
   memory: initialMemory,
-  taggedPeople,
+  taggedPeople: initialTaggedPeople,
+  allPeople,
+  familyMembers,
   comments: initialComments,
   memberNames,
-  recorderName,
+  recorderName: initialRecorderName,
   canEdit,
   currentUserId,
   familyId,
@@ -63,13 +67,47 @@ export function MemoryDetailClient({
   const [memory, setMemory] = useState(initialMemory);
   const [comments, setComments] = useState(initialComments);
 
+  // Recorder display name (local, can be updated)
+  const [recorderDisplayName, setRecorderDisplayName] = useState(initialRecorderName);
+  const [editingRecorder, setEditingRecorder] = useState(false);
+
   // Editable title
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(initialMemory.title);
 
+  // Editable description
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState(initialMemory.description ?? "");
+
+  // Editable date of memory
+  const [editingDate, setEditingDate] = useState(false);
+  const [dateDraft, setDateDraft] = useState(initialMemory.date_of_memory ?? "");
+
+  // Editable tagged people
+  const [taggedPeople, setTaggedPeople] = useState(initialTaggedPeople);
+  const [editingTags, setEditingTags] = useState(false);
+  const [taggedIds, setTaggedIds] = useState<Set<string>>(
+    new Set(initialTaggedPeople.map((p) => p.id))
+  );
+
   // Editable transcript
   const [transcriptDraft, setTranscriptDraft] = useState(initialMemory.transcript ?? "");
   const [transcriptSaving, setTranscriptSaving] = useState(false);
+  const [transcriptSaved, setTranscriptSaved] = useState(false);
+  const transcriptSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Tag search filter
+  const [tagSearch, setTagSearch] = useState("");
+
+  // Retranscription
+  const [retranscribing, setRetranscribing] = useState(false);
+
+  // Summary
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+
+  // Delete confirmation
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Comments
   const [commentText, setCommentText] = useState("");
@@ -100,6 +138,25 @@ export function MemoryDetailClient({
     return () => { supabase.removeChannel(channel); };
   }, [memory.id, memory.transcript_status]);
 
+  // Auto-generate summary for long transcripts (lazy, cached)
+  useEffect(() => {
+    if (
+      memory.transcript_status !== "ready" ||
+      memory.transcript_summary ||
+      !memory.transcript ||
+      memory.transcript.trim().split(/\s+/).length < 300
+    ) return;
+
+    setSummarizing(true);
+    fetch(`/api/memories/${memory.id}/summarize`, { method: "POST" })
+      .then((r) => r.json())
+      .then(({ summary }) => {
+        if (summary) setMemory((prev) => ({ ...prev, transcript_summary: summary }));
+      })
+      .catch(() => {})
+      .finally(() => setSummarizing(false));
+  }, [memory.id, memory.transcript_status, memory.transcript_summary, memory.transcript]);
+
   // Autosave transcript draft after 2s idle
   const saveTranscript = useCallback(
     debounce(async (text: string) => {
@@ -109,6 +166,9 @@ export function MemoryDetailClient({
         .update({ transcript_draft: text })
         .eq("id", memory.id);
       setTranscriptSaving(false);
+      setTranscriptSaved(true);
+      if (transcriptSavedTimer.current) clearTimeout(transcriptSavedTimer.current);
+      transcriptSavedTimer.current = setTimeout(() => setTranscriptSaved(false), 1500);
     }, 2000),
     [memory.id]
   );
@@ -136,9 +196,57 @@ export function MemoryDetailClient({
     setEditingTitle(false);
   }
 
+  async function saveDescription() {
+    await supabase.from("memories").update({ description: descriptionDraft || null }).eq("id", memory.id);
+    setMemory((prev) => ({ ...prev, description: descriptionDraft || null }));
+    setEditingDescription(false);
+  }
+
+  async function saveDate() {
+    await supabase.from("memories").update({ date_of_memory: dateDraft || null }).eq("id", memory.id);
+    setMemory((prev) => ({ ...prev, date_of_memory: dateDraft || null }));
+    setEditingDate(false);
+  }
+
+  async function saveTags() {
+    const originalIds = new Set(initialTaggedPeople.map((p) => p.id));
+    const added = [...taggedIds].filter((id) => !originalIds.has(id));
+    const removed = [...originalIds].filter((id) => !taggedIds.has(id));
+
+    if (added.length > 0) {
+      await supabase.from("memory_people").insert(
+        added.map((pid) => ({ memory_id: memory.id, person_id: pid, family_id: familyId }))
+      );
+    }
+    if (removed.length > 0) {
+      await supabase.from("memory_people").delete().eq("memory_id", memory.id).in("person_id", removed);
+    }
+
+    const newTagged = allPeople
+      .filter((p) => taggedIds.has(p.id))
+      .map((p) => ({ ...p, role: "subject" }));
+    setTaggedPeople(newTagged);
+    setTagSearch("");
+    setEditingTags(false);
+  }
+
+  async function saveRecorder(userId: string) {
+    const member = familyMembers.find((m) => m.user_id === userId);
+    await supabase.from("memories").update({ recorded_by: userId }).eq("id", memory.id);
+    setMemory((prev) => ({ ...prev, recorded_by: userId }));
+    setRecorderDisplayName(member?.display_name ?? "Family member");
+    setEditingRecorder(false);
+  }
+
+  async function handleRetranscribe() {
+    setRetranscribing(true);
+    await fetch(`/api/recordings/${memory.id}/retranscribe`, { method: "POST" }).catch(() => {});
+    setRetranscribing(false);
+  }
+
   async function handleDelete() {
-    if (!window.confirm("Delete this memory? This cannot be undone.")) return;
-    await supabase.from("memories").delete().eq("id", memory.id);
+    if (!confirmingDelete) { setConfirmingDelete(true); return; }
+    await fetch(`/api/memories/${memory.id}`, { method: "DELETE" });
     router.back();
   }
 
@@ -163,6 +271,12 @@ export function MemoryDetailClient({
     setReplyTo(null);
     setSubmittingComment(false);
   }
+
+  const filteredPeople = tagSearch.trim()
+    ? allPeople.filter((p) =>
+        `${p.first_name} ${p.last_name}`.toLowerCase().includes(tagSearch.toLowerCase())
+      )
+    : allPeople;
 
   const eyebrowDate = memory.date_of_memory
     ? formatDate(memory.date_of_memory)
@@ -191,7 +305,7 @@ export function MemoryDetailClient({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         {/* Eyebrow */}
         <p className="eyebrow mb-3">
-          {TYPE_LABELS[memory.type] ?? "MEMORY"} · RECORDED BY {recorderName.toUpperCase()} · {eyebrowDate.toUpperCase()}
+          {TYPE_LABELS[memory.type] ?? "MEMORY"} · RECORDED BY {recorderDisplayName.toUpperCase()} · {eyebrowDate.toUpperCase()}
         </p>
 
         {/* Title */}
@@ -263,65 +377,193 @@ export function MemoryDetailClient({
           </div>
         )}
 
-        {/* People chips */}
-        {taggedPeople.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            {taggedPeople.map((person) => (
-              <button
-                key={person.id}
-                onClick={() => router.push(`/person/${person.id}?from=memory/${memory.id}`)}
-                className="flex items-center gap-2 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-full pl-1 pr-3 py-1 transition-colors"
-              >
-                <Avatar src={person.profile_photo_url} name={`${person.first_name} ${person.last_name}`} size="xs" />
-                <span className="text-sm text-[--ink]">{person.first_name} {person.last_name}</span>
-              </button>
-            ))}
+        {/* Retranscribe prompt — audio with no transcript */}
+        {memory.type === "audio" && memory.storage_url && canEdit &&
+          (memory.transcript_status === "none" || memory.transcript_status === "failed") && (
+          <div className="bg-[--surface] border border-[--rule] rounded-xl px-5 py-4 mb-8 flex items-center justify-between gap-4">
+            <p className="text-sm text-[--ink-soft]">
+              {memory.transcript_status === "failed"
+                ? "Transcription failed. You can try again."
+                : "No transcript yet for this recording."}
+            </p>
+            <button
+              onClick={handleRetranscribe}
+              disabled={retranscribing}
+              className="flex-shrink-0 flex items-center gap-1.5 text-sm bg-[--accent] text-white px-4 py-2 rounded-lg hover:bg-[--accent-hover] disabled:opacity-50 transition-colors"
+            >
+              {retranscribing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {retranscribing ? "Transcribing…" : "Generate Transcript"}
+            </button>
           </div>
         )}
+
+        {/* People chips + tag editor */}
+        <div className="mb-8">
+          {!editingTags ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {taggedPeople.map((person) => (
+                <button
+                  key={person.id}
+                  onClick={() => router.push(`/person/${person.id}?from=memory/${memory.id}`)}
+                  className="flex items-center gap-2 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-full pl-1 pr-3 py-1 transition-colors"
+                >
+                  <Avatar src={person.profile_photo_url} name={`${person.first_name} ${person.last_name}`} size="xs" />
+                  <span className="text-sm text-[--ink]">{person.first_name} {person.last_name}</span>
+                </button>
+              ))}
+              {canEdit && (
+                <button
+                  onClick={() => setEditingTags(true)}
+                  className="flex items-center gap-1 text-xs text-[--ink-mute] hover:text-[--ink] border border-dashed border-[--rule] rounded-full px-3 py-1 transition-colors"
+                >
+                  <Users className="w-3 h-3" />
+                  Edit people
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="bg-[--surface] border border-[--rule] rounded-xl p-4">
+              <p className="eyebrow mb-3">People in this memory</p>
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[--ink-mute]" />
+                <input
+                  type="text"
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  placeholder="Search people…"
+                  className="w-full pl-8 pr-3 py-1.5 border border-[--rule] bg-[--canvas] rounded-lg text-sm text-[--ink] placeholder:text-[--ink-mute] focus:outline-none focus:border-[--gold]"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4 max-h-48 overflow-y-auto">
+                {filteredPeople.map((p) => {
+                  const selected = taggedIds.has(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setTaggedIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                        return next;
+                      })}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                        selected
+                          ? "bg-[--accent] border-[--accent] text-white"
+                          : "border-[--rule] text-[--ink-soft] hover:border-[--gold]"
+                      }`}
+                    >
+                      {selected && <Check className="w-3 h-3" />}
+                      {p.first_name} {p.last_name}
+                    </button>
+                  );
+                })}
+                {filteredPeople.length === 0 && (
+                  <p className="text-sm text-[--ink-mute] italic">No people match "{tagSearch}"</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { setTaggedIds(new Set(taggedPeople.map((p) => p.id))); setTagSearch(""); setEditingTags(false); }} className="flex-1 border border-[--rule] text-[--ink-soft] py-1.5 rounded-lg text-sm hover:bg-[--canvas]">
+                  Cancel
+                </button>
+                <button onClick={saveTags} className="flex-1 bg-[--accent] text-white py-1.5 rounded-lg text-sm hover:bg-[--accent-hover]">
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Two-column layout */}
         <div className="flex gap-10 items-start">
           {/* Transcript — left, 60ch */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-4">
-              <p className="eyebrow">Transcript</p>
-              {showLiveIndicator && (
-                <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.06em] text-[--gold]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[--gold] animate-pulse" />
-                  {memory.transcript_status === "finalizing" ? "Improving accuracy…" : "Live"}
-                </span>
-              )}
-              {memory.transcript_status === "ready" && transcriptSaving && (
-                <Loader2 className="w-3.5 h-3.5 text-[--ink-mute] animate-spin" />
-              )}
-            </div>
+            {(() => {
+              const wordCount = memory.transcript ? memory.transcript.trim().split(/\s+/).length : 0;
+              const isLong = memory.transcript_status === "ready" && wordCount >= 300;
+              const hasSummary = !!memory.transcript_summary;
 
-            {memory.transcript_status === "ready" || memory.transcript_status === "none" ? (
-              canEdit ? (
-                <textarea
-                  value={transcriptDraft}
-                  onChange={handleTranscriptChange}
-                  onBlur={commitTranscript}
-                  placeholder={memory.transcript_status === "none" ? "No transcript yet. You can type one here." : ""}
-                  rows={Math.max(6, transcriptDraft.split("\n").length + 2)}
-                  className="w-full text-[17px] leading-[1.55] text-[--ink] bg-transparent resize-none outline-none placeholder:text-[--ink-mute] max-w-[60ch]"
-                />
-              ) : (
-                <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
-                  {memory.transcript || <span className="text-[--ink-mute] italic">No transcript yet.</span>}
-                </p>
-              )
-            ) : (
-              <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
-                {memory.transcript || <span className="text-[--ink-mute] italic">Transcribing…</span>}
-              </p>
-            )}
+              return (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <p className="eyebrow">Transcript</p>
+                    {canEdit && memory.transcript_status === "ready" && (
+                      <Pencil className="w-3 h-3 text-[--ink-mute]" />
+                    )}
+                    {showLiveIndicator && (
+                      <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.06em] text-[--gold]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[--gold] animate-pulse" />
+                        {memory.transcript_status === "finalizing" ? "Improving accuracy…" : "Live"}
+                      </span>
+                    )}
+                    {memory.transcript_status === "ready" && transcriptSaving && (
+                      <Loader2 className="w-3.5 h-3.5 text-[--ink-mute] animate-spin" />
+                    )}
+                    {memory.transcript_status === "ready" && transcriptSaved && !transcriptSaving && (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-green-600">
+                        <Check className="w-3 h-3" />
+                        Saved
+                      </span>
+                    )}
+                  </div>
 
-            {memory.transcript_status === "failed" && (
-              <div className="mt-4 bg-[--accent-soft] border border-[--rule] rounded-xl px-4 py-3 text-sm text-[--ink-soft]">
-                Transcription failed. {canEdit && "You can type the transcript above."}
-              </div>
-            )}
+                  {/* Summary section for long transcripts */}
+                  {isLong && (summarizing || hasSummary) && (
+                    <div className="mb-6">
+                      {summarizing && !hasSummary ? (
+                        <div className="space-y-2 animate-pulse">
+                          <div className="h-4 bg-[--rule] rounded w-3/4" />
+                          <div className="h-4 bg-[--rule] rounded w-full" />
+                          <div className="h-4 bg-[--rule] rounded w-2/3" />
+                        </div>
+                      ) : (
+                        <p className="text-[17px] leading-[1.6] text-[--ink] max-w-[60ch]">
+                          {memory.transcript_summary}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => setSummaryExpanded((v) => !v)}
+                        className="mt-3 flex items-center gap-1.5 text-[13px] font-mono text-[--ink-mute] hover:text-[--ink] transition-colors"
+                      >
+                        <span className={`transition-transform ${summaryExpanded ? "rotate-180" : ""}`}>▼</span>
+                        {summaryExpanded ? "Hide" : "Read full transcript"} ({wordCount.toLocaleString()} words)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Full transcript — always visible if short, collapsible if long */}
+                  {(!isLong || !hasSummary || summaryExpanded) && (
+                    <>
+                      {memory.transcript_status === "ready" || memory.transcript_status === "none" ? (
+                        canEdit ? (
+                          <textarea
+                            value={transcriptDraft}
+                            onChange={handleTranscriptChange}
+                            onBlur={commitTranscript}
+                            placeholder={memory.transcript_status === "none" ? "No transcript yet. You can type one here." : ""}
+                            rows={Math.max(12, transcriptDraft.split("\n").length + 2)}
+                            className="w-full min-h-[20rem] text-[17px] leading-[1.55] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
+                          />
+                        ) : (
+                          <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                            {memory.transcript || <span className="text-[--ink-mute] italic">No transcript yet.</span>}
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                          {memory.transcript || <span className="text-[--ink-mute] italic">Transcribing…</span>}
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {memory.transcript_status === "failed" && (
+                    <div className="mt-4 bg-[--accent-soft] border border-[--rule] rounded-xl px-4 py-3 text-sm text-[--ink-soft]">
+                      Transcription failed. {canEdit && "You can type the transcript above."}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Sidebar — right, 280px, sticky */}
@@ -329,24 +571,108 @@ export function MemoryDetailClient({
             {/* About this recording */}
             <div className="bg-[--surface] border border-[--rule] rounded-xl p-5 mb-4">
               <p className="eyebrow mb-3">About this recording</p>
-              <dl className="space-y-2 text-sm">
-                {(memory.recorded_at || memory.date_of_memory) && (
-                  <div>
-                    <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Date</dt>
-                    <dd className="text-[--ink] mt-0.5">
-                      {memory.recorded_at_note || formatDate(memory.recorded_at || memory.date_of_memory)}
+              <dl className="space-y-3 text-sm">
+                {/* Date of memory — editable */}
+                <div>
+                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Date</dt>
+                  {editingDate ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={dateDraft}
+                        onChange={(e) => setDateDraft(e.target.value)}
+                        className="flex-1 border border-[--rule] bg-[--canvas] rounded px-2 py-1 text-sm text-[--ink] focus:outline-none focus:border-[--gold]"
+                      />
+                      <button onClick={saveDate} className="p-1 text-[--gold]"><Check className="w-4 h-4" /></button>
+                      <button onClick={() => { setDateDraft(memory.date_of_memory ?? ""); setEditingDate(false); }} className="p-1 text-[--ink-mute]"><X className="w-4 h-4" /></button>
+                    </div>
+                  ) : (
+                    <dd className="text-[--ink] flex items-center gap-1.5 group">
+                      <span>
+                        {memory.recorded_at_note || (memory.recorded_at || memory.date_of_memory)
+                          ? formatDate((memory.recorded_at || memory.date_of_memory)!)
+                          : <span className="text-[--ink-mute] italic">Not set</span>}
+                      </span>
+                      {canEdit && (
+                        <button onClick={() => setEditingDate(true)} className="opacity-0 group-hover:opacity-100 text-[--ink-mute] hover:text-[--ink] transition-all">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      )}
                     </dd>
-                  </div>
-                )}
+                  )}
+                </div>
+
                 {memory.duration_sec && (
                   <div>
                     <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Duration</dt>
                     <dd className="text-[--ink] mt-0.5">{fmtDuration(memory.duration_sec)}</dd>
                   </div>
                 )}
+
+                {/* Recorded by — editable */}
                 <div>
-                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Recorded by</dt>
-                  <dd className="text-[--ink] mt-0.5">{recorderName}</dd>
+                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Recorded by</dt>
+                  {editingRecorder ? (
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={memory.recorded_by}
+                        onChange={(e) => saveRecorder(e.target.value)}
+                        className="flex-1 border border-[--rule] bg-[--canvas] rounded px-2 py-1 text-sm text-[--ink] focus:outline-none focus:border-[--gold]"
+                      >
+                        {familyMembers.map((m) => (
+                          <option key={m.user_id} value={m.user_id}>
+                            {m.display_name ?? "Family member"}
+                          </option>
+                        ))}
+                      </select>
+                      <button onClick={() => setEditingRecorder(false)} className="p-1 text-[--ink-mute]"><X className="w-4 h-4" /></button>
+                    </div>
+                  ) : (
+                    <dd className="text-[--ink] flex items-center gap-1.5 group">
+                      <span>{recorderDisplayName}</span>
+                      {canEdit && (
+                        <button onClick={() => setEditingRecorder(true)} className="opacity-0 group-hover:opacity-100 text-[--ink-mute] hover:text-[--ink] transition-all">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      )}
+                    </dd>
+                  )}
+                </div>
+
+                <div>
+                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Date added</dt>
+                  <dd className="text-[--ink] mt-0.5">{formatDate(memory.created_at)}</dd>
+                </div>
+
+                {/* Description — editable */}
+                <div>
+                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Description</dt>
+                  {editingDescription ? (
+                    <div className="space-y-1.5">
+                      <textarea
+                        value={descriptionDraft}
+                        onChange={(e) => setDescriptionDraft(e.target.value)}
+                        rows={3}
+                        placeholder="Add a caption or note…"
+                        className="w-full border border-[--rule] bg-[--canvas] rounded-lg px-2 py-1.5 text-sm text-[--ink] placeholder:text-[--ink-mute] focus:outline-none focus:border-[--gold] resize-none"
+                      />
+                      <div className="flex gap-1.5">
+                        <button onClick={() => { setDescriptionDraft(memory.description ?? ""); setEditingDescription(false); }} className="flex-1 border border-[--rule] text-[--ink-soft] py-1 rounded text-xs hover:bg-[--canvas]">Cancel</button>
+                        <button onClick={saveDescription} className="flex-1 bg-[--accent] text-white py-1 rounded text-xs hover:bg-[--accent-hover]">Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <dd className="text-[--ink] flex items-start gap-1.5 group">
+                      <span className="flex-1 leading-relaxed">
+                        {memory.description || <span className="text-[--ink-mute] italic">None</span>}
+                      </span>
+                      {canEdit && (
+                        <button onClick={() => setEditingDescription(true)} className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-[--ink-mute] hover:text-[--ink] transition-all mt-0.5">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      )}
+                    </dd>
+                  )}
                 </div>
               </dl>
             </div>
@@ -422,13 +748,33 @@ export function MemoryDetailClient({
 
             {/* Danger zone */}
             {canEdit && (
-              <button
-                onClick={handleDelete}
-                className="mt-4 flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors w-full justify-center py-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete memory
-              </button>
+              confirmingDelete ? (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                  <p className="text-sm text-red-700 font-medium mb-3">Delete this memory permanently?</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setConfirmingDelete(false)}
+                      className="flex-1 text-sm border border-[--rule] text-[--ink-soft] py-1.5 rounded-lg hover:bg-[--canvas] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="flex-1 text-sm bg-red-600 text-white py-1.5 rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleDelete}
+                  className="mt-4 flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors w-full justify-center py-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete memory
+                </button>
+              )
             )}
           </aside>
         </div>
@@ -437,19 +783,79 @@ export function MemoryDetailClient({
         <div className="lg:hidden mt-10">
           <div className="bg-[--surface] border border-[--rule] rounded-xl p-5 mb-4">
             <p className="eyebrow mb-3">About this recording</p>
-            <dl className="space-y-2 text-sm">
-              {(memory.recorded_at || memory.date_of_memory) && (
-                <div>
-                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Date</dt>
-                  <dd className="text-[--ink] mt-0.5">{memory.recorded_at_note || formatDate(memory.recorded_at || memory.date_of_memory)}</dd>
-                </div>
-              )}
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Date</dt>
+                {editingDate ? (
+                  <div className="flex items-center gap-1.5">
+                    <input type="date" value={dateDraft} onChange={(e) => setDateDraft(e.target.value)}
+                      className="flex-1 border border-[--rule] bg-[--canvas] rounded px-2 py-1 text-sm text-[--ink] focus:outline-none focus:border-[--gold]" />
+                    <button onClick={saveDate} className="p-1 text-[--gold]"><Check className="w-4 h-4" /></button>
+                    <button onClick={() => { setDateDraft(memory.date_of_memory ?? ""); setEditingDate(false); }} className="p-1 text-[--ink-mute]"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <dd className="text-[--ink] flex items-center gap-1.5 group">
+                    <span>{(memory.recorded_at || memory.date_of_memory) ? formatDate((memory.recorded_at || memory.date_of_memory)!) : <span className="text-[--ink-mute] italic">Not set</span>}</span>
+                    {canEdit && <button onClick={() => setEditingDate(true)} className="opacity-0 group-hover:opacity-100 text-[--ink-mute] hover:text-[--ink] transition-all"><Pencil className="w-3 h-3" /></button>}
+                  </dd>
+                )}
+              </div>
               {memory.duration_sec && (
                 <div>
                   <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Duration</dt>
                   <dd className="text-[--ink] mt-0.5">{fmtDuration(memory.duration_sec)}</dd>
                 </div>
               )}
+              <div>
+                <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Recorded by</dt>
+                {editingRecorder ? (
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={memory.recorded_by}
+                      onChange={(e) => saveRecorder(e.target.value)}
+                      className="flex-1 border border-[--rule] bg-[--canvas] rounded px-2 py-1 text-sm text-[--ink] focus:outline-none focus:border-[--gold]"
+                    >
+                      {familyMembers.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.display_name ?? "Family member"}
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={() => setEditingRecorder(false)} className="p-1 text-[--ink-mute]"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <dd className="text-[--ink] flex items-center gap-1.5 group">
+                    <span>{recorderDisplayName}</span>
+                    {canEdit && (
+                      <button onClick={() => setEditingRecorder(true)} className="opacity-0 group-hover:opacity-100 text-[--ink-mute] hover:text-[--ink] transition-all">
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </dd>
+                )}
+              </div>
+              <div>
+                <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em]">Date added</dt>
+                <dd className="text-[--ink] mt-0.5">{formatDate(memory.created_at)}</dd>
+              </div>
+              <div>
+                <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Description</dt>
+                {editingDescription ? (
+                  <div className="space-y-1.5">
+                    <textarea value={descriptionDraft} onChange={(e) => setDescriptionDraft(e.target.value)} rows={3} placeholder="Add a caption or note…"
+                      className="w-full border border-[--rule] bg-[--canvas] rounded-lg px-2 py-1.5 text-sm text-[--ink] placeholder:text-[--ink-mute] focus:outline-none focus:border-[--gold] resize-none" />
+                    <div className="flex gap-1.5">
+                      <button onClick={() => { setDescriptionDraft(memory.description ?? ""); setEditingDescription(false); }} className="flex-1 border border-[--rule] text-[--ink-soft] py-1 rounded text-xs">Cancel</button>
+                      <button onClick={saveDescription} className="flex-1 bg-[--accent] text-white py-1 rounded text-xs">Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <dd className="text-[--ink] flex items-start gap-1.5 group">
+                    <span className="flex-1 leading-relaxed">{memory.description || <span className="text-[--ink-mute] italic">None</span>}</span>
+                    {canEdit && <button onClick={() => setEditingDescription(true)} className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-[--ink-mute] hover:text-[--ink] transition-all mt-0.5"><Pencil className="w-3 h-3" /></button>}
+                  </dd>
+                )}
+              </div>
             </dl>
           </div>
 
@@ -489,13 +895,33 @@ export function MemoryDetailClient({
           </div>
 
           {canEdit && (
-            <button
-              onClick={handleDelete}
-              className="mt-4 flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors w-full justify-center py-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete memory
-            </button>
+            confirmingDelete ? (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                <p className="text-sm text-red-700 font-medium mb-3">Delete this memory permanently?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmingDelete(false)}
+                    className="flex-1 text-sm border border-[--rule] text-[--ink-soft] py-1.5 rounded-lg hover:bg-[--canvas] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="flex-1 text-sm bg-red-600 text-white py-1.5 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleDelete}
+                className="mt-4 flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 transition-colors w-full justify-center py-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete memory
+              </button>
+            )
           )}
         </div>
       </div>

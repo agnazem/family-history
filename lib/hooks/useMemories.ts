@@ -31,6 +31,7 @@ export function useMemories(personId: string | null, familyId: string | null) {
         .from("memories")
         .select("*")
         .in("id", ids)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false }),
       supabase
         .from("memory_people")

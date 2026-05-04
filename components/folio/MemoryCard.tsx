@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Image as ImageIcon, FileText, PenLine, Download, Users, ExternalLink } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, PenLine, Download, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import type { Memory, Person } from "@/types";
@@ -41,18 +41,14 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
         <Icon className="w-4 h-4 mt-1 flex-shrink-0 text-[--ink-mute]" />
         <div className="flex-1 min-w-0">
           <span className="eyebrow">{TYPE_LABELS[memory.type]}</span>
-          <p className="font-display text-[22px] leading-[1.2] font-normal text-[--ink] mt-0.5">
-            {memory.title}
-          </p>
-          <p className="body-sm mt-1">{formatDate(memory.created_at)}</p>
           <Link
             href={`/memory/${memory.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.04em] text-[--ink-mute] hover:text-[--accent] transition-colors mt-0.5"
+            className="block font-display text-[22px] leading-[1.2] font-normal text-[--ink] mt-0.5 hover:text-[--accent] transition-colors"
           >
-            <ExternalLink className="w-3 h-3" />
-            Open
+            {memory.title}
           </Link>
+          <p className="body-sm mt-1">{formatDate(memory.date_of_memory ?? memory.created_at)}</p>
 
           {memory.type === "audio" && memory.storage_url && (
             <AudioPlayer src={memory.storage_url} className="mt-3" />
@@ -82,8 +78,14 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
             </a>
           )}
 
-          {memory.description && (
-            <p className="text-[15px] leading-relaxed text-[--ink-soft] mt-2">
+          {memory.transcript && (
+            <p className="text-[14px] leading-[1.5] text-[--ink-soft] mt-2 line-clamp-3">
+              {memory.transcript}
+            </p>
+          )}
+
+          {!memory.transcript && memory.description && (
+            <p className="text-[14px] leading-[1.5] text-[--ink-soft] mt-2">
               {memory.description}
             </p>
           )}

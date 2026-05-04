@@ -25,10 +25,12 @@ export async function GET(request: Request) {
             .single();
 
           if (!existing) {
+            const displayName = (user.user_metadata?.full_name as string | undefined) ?? null;
             await supabase.from("family_members").insert({
               family_id: familyId,
               user_id: user.id,
               role: "member",
+              display_name: displayName,
             });
           }
 

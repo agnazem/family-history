@@ -72,6 +72,7 @@ export default function ActivityPage() {
         .from("memories")
         .select("id, type, title, created_at, recorded_by, family_id")
         .eq("family_id", family!.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(50);
 

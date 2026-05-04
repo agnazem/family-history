@@ -54,12 +54,15 @@ export default async function MemoryPage({ params }: Props) {
   // Verify family membership
   const { data: membership } = await supabase
     .from("family_members")
-    .select("role, display_name")
+    .select("role, display_name, can_edit_memories")
     .eq("family_id", memory.family_id)
     .eq("user_id", user.id)
     .single();
 
   if (!membership) notFound();
+
+  // Non-admins cannot view deleted memories
+  if (memory.deleted_at && membership.role !== "admin") notFound();
 
   // Fetch recorder's display name
   const { data: recorderMember } = await supabase
@@ -83,6 +86,13 @@ export default async function MemoryPage({ params }: Props) {
     })
     .filter(Boolean) as (Person & { role: string })[];
 
+  // Fetch all people in the family for the tag editor
+  const { data: allPeople } = await supabase
+    .from("people")
+    .select("id, first_name, last_name, profile_photo_url")
+    .eq("family_id", memory.family_id)
+    .order("last_name", { ascending: true });
+
   // Fetch comments (flat list — client handles threading)
   const { data: comments } = await supabase
     .from("comments")
@@ -101,12 +111,15 @@ export default async function MemoryPage({ params }: Props) {
     memberNames[m.user_id] = m.display_name ?? "Family member";
   }
 
-  const canEdit = membership.role === "admin" || memory.recorded_by === user.id;
+  const canEdit = membership.role === "admin" ||
+    (membership.can_edit_memories === true && memory.recorded_by === user.id);
 
   return (
     <MemoryDetailClient
       memory={memory as Memory}
       taggedPeople={taggedPeople}
+      allPeople={(allPeople ?? []) as Person[]}
+      familyMembers={(members ?? []) as { user_id: string; display_name: string | null }[]}
       comments={(comments ?? []) as MemoryComment[]}
       memberNames={memberNames}
       recorderName={recorderMember?.display_name ?? "Family member"}
