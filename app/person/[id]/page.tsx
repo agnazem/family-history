@@ -16,7 +16,8 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
 import type { PermissionKey } from "@/types";
 import { Spinner } from "@/components/ui/Spinner";
-import { ArrowLeft, Pencil, Plus, GitMerge, UserPlus, Camera, Trash2, Mic } from "lucide-react";
+import { Pencil, Plus, GitMerge, UserPlus, Camera, Trash2, Mic } from "lucide-react";
+import { AppNav } from "@/components/ui/AppNav";
 import { formatDate } from "@/lib/utils";
 import { useFamily } from "@/lib/hooks/useFamily";
 import type { Person, Relationship } from "@/types";
@@ -153,16 +154,10 @@ export default function PersonPage() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      {/* Header */}
+      <AppNav />
+      {/* Profile header */}
       <div className="bg-[--surface] border-b border-[--rule]">
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <button
-            onClick={() => router.push("/tree")}
-            className="flex items-center gap-1.5 text-sm text-[--ink-mute] hover:text-[--ink-soft] mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to tree
-          </button>
 
           <div className="flex items-start gap-4">
             <div className="relative group flex-shrink-0">

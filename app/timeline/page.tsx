@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
+import { AppNav } from "@/components/ui/AppNav";
 import {
-  ArrowLeft, Mic, Image as ImageIcon, FileText, PenLine,
+  Mic, Image as ImageIcon, FileText, PenLine,
   Play, Pause, Download, Users,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
@@ -138,15 +139,8 @@ export default function TimelinePage() {
 
   return (
     <div className="min-h-screen bg-[--canvas]">
+      <AppNav />
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-        <button
-          onClick={() => router.push("/tree")}
-          className="flex items-center gap-1.5 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to tree
-        </button>
-
         <div className="mb-10">
           <h1 className="font-display text-[clamp(32px,5vw,48px)] font-normal text-[--ink] leading-[1.1] tracking-[-0.02em]">
             Timeline

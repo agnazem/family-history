@@ -7,7 +7,8 @@ import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, Settings, LogOut, LayoutDashboard, Search, Clock, X, Users, Activity, MousePointer2, UserCircle } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, LayoutDashboard, Search, X, Users, MousePointer2 } from "lucide-react";
+import { AppNav } from "@/components/ui/AppNav";
 import { SearchModal } from "@/components/search/SearchModal";
 import { Spinner } from "@/components/ui/Spinner";
 import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
@@ -89,12 +90,6 @@ export default function TreePage() {
     setLayouting(false);
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
-  }
-
   if (familyLoading || peopleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-canvas">
@@ -128,123 +123,71 @@ export default function TreePage() {
   const isAdmin = member?.role === "admin";
   const canEditTree = isAdmin || member?.can_edit_tree === true;
 
+  const treeRightSlot = (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => setShowSearch(true)}
+        className="flex items-center gap-1.5 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors"
+        title="Search (⌘K)"
+      >
+        <Search className="w-4 h-4 flex-shrink-0" />
+        <span className="hidden sm:inline text-[13px]">Search</span>
+      </button>
+
+      {canEditTree && (
+        <>
+          <div className="w-px h-4 bg-[--rule] mx-0.5" />
+          <button
+            onClick={() => setSelectMode((s) => !s)}
+            className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors text-[13px] ${
+              selectMode
+                ? "bg-[--accent-soft] border-[--accent] text-[--accent]"
+                : "border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt]"
+            }`}
+            title={selectMode ? "Switch to pan mode" : "Switch to select mode"}
+          >
+            <MousePointer2 className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">{selectMode ? "Selecting" : "Select"}</span>
+          </button>
+          <button
+            onClick={handleAutoLayout}
+            disabled={layouting || people.length === 0}
+            className="hidden sm:flex items-center gap-1.5 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-[13px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            title={layouting ? "Laying out..." : "Auto Layout"}
+          >
+            <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">{layouting ? "Laying out..." : "Layout"}</span>
+          </button>
+        </>
+      )}
+
+      <div className="w-px h-4 bg-[--rule] mx-0.5" />
+
+      <button
+        onClick={() => canEditTree ? setShowAddPerson(true) : setRequestingPermission("can_edit_tree")}
+        className="flex items-center gap-1.5 bg-[--accent] hover:bg-[--accent-hover] text-white text-[13px] p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors"
+        title="Add Person"
+      >
+        <UserPlus className="w-4 h-4 flex-shrink-0" />
+        <span className="hidden sm:inline">Add Person</span>
+      </button>
+      {canEditTree && (
+        <button
+          onClick={() => setShowAddRelationship(true)}
+          disabled={people.length < 2}
+          className="hidden sm:flex items-center gap-1.5 border border-[--accent] text-[--accent] hover:bg-[--accent-soft] text-[13px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+          title="Add Relationship"
+        >
+          <GitMerge className="w-4 h-4 flex-shrink-0" />
+          <span className="hidden md:inline">Relate</span>
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-canvas">
-      {/* Toolbar */}
-      <header className="flex items-center justify-between px-3 py-2 bg-white border-b border-accent-border shadow-sm z-10 gap-2">
-        <div className="flex items-center gap-2.5 min-w-0 flex-shrink-0">
-          <div className="w-[26px] h-[26px] rounded-[7px] bg-accent flex items-center justify-center flex-shrink-0">
-            <BookOpen className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="font-display font-normal text-stone-900 truncate text-sm sm:text-base">{family.name}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {/* View nav group */}
-          <button
-            onClick={() => router.push("/timeline")}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
-            title="Timeline"
-          >
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Timeline</span>
-          </button>
-          <button
-            onClick={() => router.push("/activity")}
-            className="hidden sm:flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors min-h-[44px]"
-            title="Activity"
-          >
-            <Activity className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden md:inline">Activity</span>
-          </button>
-          <button
-            onClick={() => setShowSearch(true)}
-            className="flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
-            title="Search (⌘K)"
-          >
-            <Search className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Search</span>
-          </button>
-
-          {/* Divider */}
-          <div className="w-px h-6 bg-gray-200 mx-0.5" />
-
-          {/* Canvas tools group — only for users who can edit the tree */}
-          {canEditTree && (
-            <>
-              <button
-                onClick={() => setSelectMode((s) => !s)}
-                className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] ${
-                  selectMode
-                    ? "bg-accent-pale border-accent-mid text-accent"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-                title={selectMode ? "Switch to pan mode" : "Switch to select mode"}
-              >
-                <MousePointer2 className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline">{selectMode ? "Selecting" : "Select"}</span>
-              </button>
-              <button
-                onClick={handleAutoLayout}
-                disabled={layouting || people.length === 0}
-                className="hidden sm:flex items-center gap-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
-                title={layouting ? "Laying out..." : "Auto Layout"}
-              >
-                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden lg:inline">{layouting ? "Laying out..." : "Auto Layout"}</span>
-              </button>
-            </>
-          )}
-
-          {/* Divider */}
-          <div className="w-px h-6 bg-gray-200 mx-0.5" />
-
-          {/* Primary actions group */}
-          <button
-            onClick={() => canEditTree ? setShowAddPerson(true) : setRequestingPermission("can_edit_tree")}
-            className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
-            title="Add Person"
-          >
-            <UserPlus className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Add Person</span>
-          </button>
-          <button
-            onClick={() => canEditTree ? setShowAddRelationship(true) : setRequestingPermission("can_edit_tree")}
-            disabled={people.length < 2}
-            className="hidden sm:flex items-center gap-1.5 border border-accent text-accent hover:bg-accent-pale text-sm px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 min-h-[44px]"
-            title="Add Relationship"
-          >
-            <GitMerge className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden md:inline">Add Relationship</span>
-          </button>
-
-          {/* Divider */}
-          <div className="w-px h-6 bg-gray-200 mx-0.5" />
-
-          <button
-            onClick={() => router.push("/account")}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            title="Your account"
-          >
-            <UserCircle className="w-4 h-4" />
-          </button>
-          {member?.role === "admin" && (
-            <button
-              onClick={() => router.push("/settings")}
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              title="Family settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={handleSignOut}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+      <AppNav rightSlot={treeRightSlot} />
 
       {/* Welcome / invite nudge */}
       {showWelcomeBanner && member?.role === "admin" && (

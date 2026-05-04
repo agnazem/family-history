@@ -40,7 +40,7 @@ export default function LandingPage() {
       if (error) {
         setError(error.message);
       } else {
-        window.location.href = "/tree";
+        window.location.href = "/home";
       }
     }
     setLoading(false);

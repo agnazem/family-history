@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
-import { ArrowLeft, Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
+import { AppNav } from "@/components/ui/AppNav";
+import { Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
 import type { MemoryType } from "@/types";
 
 const TYPE_LABELS: Record<MemoryType, string> = {
-  audio: "a voice memory",
-  photo: "a photo",
-  document: "a document",
-  note: "a note",
+  audio: "Voice memory",
+  photo: "Photo",
+  document: "Document",
+  note: "Note",
 };
 
 const TYPE_ICONS: Record<MemoryType, React.ElementType> = {
@@ -22,10 +23,10 @@ const TYPE_ICONS: Record<MemoryType, React.ElementType> = {
 };
 
 const TYPE_COLORS: Record<MemoryType, string> = {
-  audio: "bg-purple-50 text-purple-600",
-  photo: "bg-accent-pale text-accent",
-  document: "bg-green-50 text-green-600",
-  note: "bg-canvas text-slate-600",
+  audio: "bg-[--accent-soft] text-[--accent]",
+  photo: "bg-[--accent-soft] text-[--accent]",
+  document: "bg-[--surface-alt] text-[--ink-soft]",
+  note: "bg-[--surface-alt] text-[--ink-soft]",
 };
 
 function relativeTime(dateStr: string): string {
@@ -40,11 +41,11 @@ function relativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function feedSentence(typeLabel: string, taggedNames: string[]): string {
-  if (taggedNames.length === 0) return `added ${typeLabel}`;
-  if (taggedNames.length === 1) return `added ${typeLabel} of ${taggedNames[0]}`;
-  if (taggedNames.length === 2) return `added ${typeLabel} of ${taggedNames[0]} and ${taggedNames[1]}`;
-  return `added ${typeLabel} of ${taggedNames[0]} and ${taggedNames.length - 1} others`;
+function formatSubject(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return `${names[0]}, ${names[1]} & ${names.length - 2} more`;
 }
 
 type FeedItem = {
@@ -58,7 +59,6 @@ type FeedItem = {
 };
 
 export default function ActivityPage() {
-  const router = useRouter();
   const { family, loading: familyLoading } = useFamily();
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,30 +130,23 @@ export default function ActivityPage() {
 
   if (familyLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <p className="text-accent">Loading activity...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[--canvas]">
+        <p className="text-[--ink-soft]">Loading activity…</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-canvas">
+      <AppNav />
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <button
-          onClick={() => router.push("/tree")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to tree
-        </button>
-
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">Activity</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{family?.name} · last 50 memories</p>
+          <h1 className="font-display text-[clamp(28px,4vw,40px)] font-normal text-[--ink] leading-[1.1] tracking-[-0.02em]">Activity</h1>
+          <p className="text-sm text-[--ink-mute] mt-1">{family?.name} · last 50 memories</p>
         </div>
 
         {feed.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-[--ink-mute]">
             <p className="mb-1">No activity yet.</p>
             <p className="text-sm">Visit a family member&apos;s page to add the first memory.</p>
           </div>
@@ -162,25 +155,44 @@ export default function ActivityPage() {
             {feed.map((item) => {
               const Icon = TYPE_ICONS[item.type];
               const colorCls = TYPE_COLORS[item.type];
+              const subject = formatSubject(item.taggedNames);
               return (
-                <div
+                <Link
                   key={item.id}
-                  className="flex items-start gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                  href={`/memory/${item.id}`}
+                  className="flex items-start gap-3 bg-[--surface] rounded-xl border border-[--rule] px-4 py-3.5 hover:border-[--gold] transition-colors block"
                 >
-                  <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${colorCls}`}>
+                  <div className={`mt-1 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colorCls}`}>
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-800">
-                      <span className="font-medium">{item.recorderName}</span>
-                      {" "}
-                      {feedSentence(TYPE_LABELS[item.type], item.taggedNames)}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                      {item.title} · {relativeTime(item.created_at)}
-                    </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        {subject ? (
+                          <>
+                            <p className="font-semibold text-[15px] text-[--ink] leading-snug truncate">
+                              {subject}
+                            </p>
+                            <p className="font-display text-[14px] text-[--ink-soft] mt-0.5 truncate">
+                              {item.title}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="font-display text-[15px] text-[--ink] leading-snug truncate">
+                            {item.title}
+                          </p>
+                        )}
+                        <p className="text-xs text-[--ink-mute] mt-1.5">
+                          {TYPE_LABELS[item.type]} · by{" "}
+                          <span className="text-[--ink-soft]">{item.recorderName}</span>
+                        </p>
+                      </div>
+                      <span className="text-xs text-[--ink-mute] flex-shrink-0 mt-0.5">
+                        {relativeTime(item.created_at)}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

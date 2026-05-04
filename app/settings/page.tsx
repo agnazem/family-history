@@ -6,9 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
-  ArrowLeft, UserPlus, Mail, Crown, Users, Trash2,
+  UserPlus, Mail, Crown, Users, Trash2,
   ShieldCheck, ShieldOff, X, CheckCircle, AlertCircle, UserCheck, Pencil, Check,
 } from "lucide-react";
+import { AppNav } from "@/components/ui/AppNav";
 import type { Invitation, PermissionRequest } from "@/types";
 
 type MemberRow = {
@@ -217,20 +218,12 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-canvas">
+      <AppNav />
       <div className="max-w-2xl mx-auto px-4 py-8">
 
-        {/* Header */}
-        <button
-          onClick={() => router.push("/tree")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to tree
-        </button>
-
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-light text-stone-900 tracking-tight">{family.name}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Admin panel</p>
+          <h1 className="font-display text-[clamp(28px,4vw,40px)] font-normal text-[--ink] leading-[1.1] tracking-[-0.02em]">{family.name}</h1>
+          <p className="text-sm text-[--ink-mute] mt-1">Family settings</p>
         </div>
 
         {/* Flash message */}

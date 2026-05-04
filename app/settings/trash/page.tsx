@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
-import { ArrowLeft, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
+import { Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { AppNav } from "@/components/ui/AppNav";
 import type { Memory, MemoryType } from "@/types";
 
 const TYPE_LABELS: Record<MemoryType, string> = {
@@ -16,7 +16,6 @@ const TYPE_LABELS: Record<MemoryType, string> = {
 };
 
 export default function TrashPage() {
-  const router = useRouter();
   const { family, member, loading: familyLoading } = useFamily();
   const [deleted, setDeleted] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,15 +78,8 @@ export default function TrashPage() {
 
   return (
     <div className="min-h-screen bg-[--canvas]">
+      <AppNav />
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-        <button
-          onClick={() => router.push("/settings")}
-          className="flex items-center gap-1.5 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to settings
-        </button>
-
         <div className="mb-8">
           <h1 className="font-display text-[clamp(28px,5vw,40px)] font-normal text-[--ink] leading-[1.1] tracking-[-0.02em]">
             Deleted memories
