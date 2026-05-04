@@ -10,6 +10,7 @@ interface PersonSidePanelProps {
   memoryCount: number;
   onClose: () => void;
   onOpenProfile: (id: string) => void;
+  onSetAsRoot?: () => void;
 }
 
 function formatYear(dateStr: string | null) {
@@ -17,7 +18,7 @@ function formatYear(dateStr: string | null) {
   return new Date(dateStr).getFullYear();
 }
 
-export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile }: PersonSidePanelProps) {
+export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile, onSetAsRoot }: PersonSidePanelProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -96,7 +97,7 @@ export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile }:
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-[--rule]">
+      <div className="px-5 py-4 border-t border-[--rule] space-y-2">
         <button
           onClick={() => onOpenProfile(person.id)}
           className="w-full flex items-center justify-center gap-2 bg-[--accent] hover:bg-[--accent-hover] text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
@@ -104,6 +105,14 @@ export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile }:
           Open profile
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
+        {onSetAsRoot && (
+          <button
+            onClick={onSetAsRoot}
+            className="w-full flex items-center justify-center gap-2 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] py-2 rounded-xl text-sm transition-colors"
+          >
+            Set as tree root
+          </button>
+        )}
       </div>
     </div>
   );

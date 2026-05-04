@@ -10,6 +10,15 @@ export interface Family {
   name: string;
   created_by: string;
   created_at: string;
+  root_person_id: string | null;
+}
+
+export interface GenColumn {
+  normGen: number;
+  relGen: number;
+  x: number;
+  label: string;
+  decade: string | null;
 }
 
 export interface FamilyMember {

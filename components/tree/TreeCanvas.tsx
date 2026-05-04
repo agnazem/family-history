@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -16,53 +16,35 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PersonNode, type PersonNodeData } from "./PersonNode";
+import { GenerationHeaderNode } from "./GenerationHeaderNode";
 import { RelationshipModal } from "./RelationshipModal";
-import type { Person, Relationship } from "@/types";
+import { computeLayout, NODE_WIDTH } from "@/lib/layout";
+import type { Person, Relationship, GenColumn } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { debounce } from "@/lib/utils";
-import { useState } from "react";
 
-const nodeTypes = { person: PersonNode };
-
-const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
-  parent_child: { stroke: "#E0D2BB", strokeWidth: 1 },
-  spouse:       { stroke: "#C2874F", strokeWidth: 1, strokeDasharray: "4 3" },
+const nodeTypes = {
+  person: PersonNode,
+  generationHeader: GenerationHeaderNode,
 };
 
-function buildNodes(
-  people: Person[],
-  onNodeClick: (id: string) => void,
-  memoryCounts: Record<string, number>
-): Node[] {
-  return people.map((p) => ({
-    id: p.id,
-    type: "person",
-    position: { x: p.canvas_x, y: p.canvas_y },
-    data: {
-      ...p,
-      onClick: onNodeClick,
-      memoryCount: memoryCounts[p.id] ?? 0,
-    } as unknown as Record<string, unknown>,
-  }));
-}
+const EDGE_STYLES = {
+  parent_child: { stroke: "#E0D2BB", strokeWidth: 1 },
+  spouse: { stroke: "#C2874F", strokeWidth: 1, strokeDasharray: "4 3" },
+};
 
-function buildEdges(
-  relationships: Relationship[],
-  positions: Map<string, { x: number; y: number }>
-): Edge[] {
+const HEADER_Y_OFFSET = 44; // px above the topmost node in a column
+
+// ── edge builder ─────────────────────────────────────────────────────────────
+function buildEdges(relationships: Relationship[]): Edge[] {
   const edges: Edge[] = [];
   for (const rel of relationships) {
     if (rel.type === "spouse") {
-      const posA = positions.get(rel.person_a_id);
-      const posB = positions.get(rel.person_b_id);
-      const aIsLeft = !posA || !posB || posA.x <= posB.x;
       edges.push({
         id: rel.id,
         source: rel.person_a_id,
         target: rel.person_b_id,
-        sourceHandle: aIsLeft ? "right" : "left-out",
-        targetHandle: aIsLeft ? "left" : "right-in",
-        type: "smoothstep",
+        type: "straight",
         style: EDGE_STYLES.spouse,
       });
     } else if (rel.type === "parent_child") {
@@ -70,6 +52,8 @@ function buildEdges(
         id: rel.id,
         source: rel.person_a_id,
         target: rel.person_b_id,
+        sourceHandle: "right",
+        targetHandle: "left",
         type: "smoothstep",
         style: EDGE_STYLES.parent_child,
         markerEnd: { type: MarkerType.ArrowClosed, color: "#E0D2BB" },
@@ -79,12 +63,16 @@ function buildEdges(
   return edges;
 }
 
+// ── component ─────────────────────────────────────────────────────────────────
 interface TreeCanvasProps {
   people: Person[];
   relationships: Relationship[];
   onNodeClick: (personId: string) => void;
   memoryCounts?: Record<string, number>;
   selectMode?: boolean;
+  selectedPersonId?: string | null;
+  rootPersonId?: string | null;
+  onGenColumns?: (cols: GenColumn[]) => void;
 }
 
 export function TreeCanvas({
@@ -93,32 +81,76 @@ export function TreeCanvas({
   onNodeClick,
   memoryCounts = {},
   selectMode = false,
+  selectedPersonId,
+  rootPersonId,
+  onGenColumns,
 }: TreeCanvasProps) {
   const supabase = createClient();
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
 
-  const positions = useMemo(
-    () => new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }])),
-    [people]
+  // Compute layout from relationship graph
+  const { positions, genColumns } = useMemo(
+    () => computeLayout(people, relationships, rootPersonId),
+    [people, relationships, rootPersonId]
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(
-    buildNodes(people, onNodeClick, memoryCounts)
+  // Notify parent of genColumns for header display
+  useEffect(() => {
+    onGenColumns?.(genColumns);
+  }, [genColumns, onGenColumns]);
+
+  // Build person nodes
+  const personNodes: Node[] = useMemo(() =>
+    people.map((p) => ({
+      id: p.id,
+      type: "person",
+      position: { x: positions[p.id]?.x ?? p.canvas_x, y: positions[p.id]?.y ?? p.canvas_y },
+      data: {
+        ...p,
+        onClick: onNodeClick,
+        memoryCount: memoryCounts[p.id] ?? 0,
+        isFocused: p.id === selectedPersonId,
+      } as unknown as Record<string, unknown>,
+    })),
+    [people, positions, onNodeClick, memoryCounts, selectedPersonId]
   );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(
-    buildEdges(relationships, positions)
-  );
 
-  const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
+  // Build generation header nodes
+  const headerNodes: Node[] = useMemo(() => {
+    // Find the minimum Y for each normGen column
+    const minYByNormGen: Record<number, number> = {};
+    for (const p of people) {
+      const ng = positions[p.id]?.normGen;
+      if (ng === undefined) continue;
+      const y = positions[p.id]?.y ?? 0;
+      if (minYByNormGen[ng] === undefined || y < minYByNormGen[ng]) {
+        minYByNormGen[ng] = y;
+      }
+    }
 
-  useMemo(() => {
-    setNodes(buildNodes(people, onNodeClick, memoryCounts));
-  }, [people, onNodeClick, memoryCounts, setNodes]);
+    return genColumns.map((col) => ({
+      id: `gen-header-${col.normGen}`,
+      type: "generationHeader",
+      position: {
+        x: col.x,
+        y: (minYByNormGen[col.normGen] ?? HEADER_Y_OFFSET + 20) - HEADER_Y_OFFSET,
+      },
+      data: { label: col.label, decade: col.decade },
+      draggable: false,
+      selectable: false,
+      focusable: false,
+    }));
+  }, [genColumns, people, positions]);
 
-  useMemo(() => {
-    setEdges(buildEdges(relationships, positions));
-  }, [relationships, positions, setEdges]);
+  const allNodes = useMemo(() => [...personNodes, ...headerNodes], [personNodes, headerNodes]);
+  const allEdges = useMemo(() => buildEdges(relationships), [relationships]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(allNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(allEdges);
+
+  // Sync when data changes
+  useMemo(() => setNodes(allNodes), [allNodes, setNodes]);
+  useMemo(() => setEdges(allEdges), [allEdges, setEdges]);
 
   const savePosition = useCallback(
     debounce(async (id: string, x: number, y: number) => {
@@ -137,7 +169,8 @@ export function TreeCanvas({
         if (
           change.type === "position" &&
           change.position &&
-          !change.dragging
+          !change.dragging &&
+          !change.id.startsWith("gen-header-")
         ) {
           savePosition(change.id, change.position.x, change.position.y);
         }
@@ -175,7 +208,7 @@ export function TreeCanvas({
         onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.15 }}
         minZoom={0.1}
         maxZoom={2}
         deleteKeyCode={null}
@@ -187,6 +220,7 @@ export function TreeCanvas({
         <Controls />
         <MiniMap
           nodeColor={(n) => {
+            if (n.type === "generationHeader") return "transparent";
             const d = n.data as unknown as PersonNodeData;
             return d.dod ? "#8A7E69" : "#C2874F";
           }}

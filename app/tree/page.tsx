@@ -14,7 +14,7 @@ import { SearchModal } from "@/components/search/SearchModal";
 import { Spinner } from "@/components/ui/Spinner";
 import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
 import { createClient } from "@/lib/supabase/client";
-import type { PermissionKey } from "@/types";
+import type { PermissionKey, GenColumn } from "@/types";
 import { computeLayout } from "@/lib/layout";
 
 export default function TreePage() {
@@ -32,8 +32,17 @@ export default function TreePage() {
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => searchParams.get("welcome") === "1");
   const [selectMode, setSelectMode] = useState(false);
   const [requestingPermission, setRequestingPermission] = useState<PermissionKey | null>(null);
+  // Local root person ID — optimistically updated on set-as-root
+  const [localRootId, setLocalRootId] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  // Sync localRootId from family once loaded
+  useEffect(() => {
+    if (family?.root_person_id !== undefined) {
+      setLocalRootId(family.root_person_id ?? null);
+    }
+  }, [family?.root_person_id]);
 
   useEffect(() => {
     if (!family?.id) return;
@@ -72,7 +81,7 @@ export default function TreePage() {
   async function handleAutoLayout() {
     if (people.length === 0) return;
     setLayouting(true);
-    const positions = computeLayout(people, relationships);
+    const { positions } = computeLayout(people, relationships, localRootId);
     await Promise.all(
       Object.entries(positions).map(([id, { x, y }]) =>
         supabase.from("people").update({ canvas_x: x, canvas_y: y }).eq("id", id)
@@ -80,6 +89,16 @@ export default function TreePage() {
     );
     await refetch();
     setLayouting(false);
+  }
+
+  async function handleSetAsRoot(personId: string) {
+    if (!family?.id) return;
+    setLocalRootId(personId);
+    setSelectedPersonId(null);
+    await supabase
+      .from("families")
+      .update({ root_person_id: personId })
+      .eq("id", family.id);
   }
 
   if (familyLoading || peopleLoading) {
@@ -95,9 +114,7 @@ export default function TreePage() {
       <div className="min-h-screen flex items-center justify-center bg-canvas">
         <div className="text-center">
           <BookOpen className="w-12 h-12 text-accent mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            No family found
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No family found</h2>
           <p className="text-gray-600 mb-6">
             You haven&apos;t joined or created a family history yet.
           </p>
@@ -145,10 +162,10 @@ export default function TreePage() {
             onClick={handleAutoLayout}
             disabled={layouting || people.length === 0}
             className="hidden sm:flex items-center gap-1.5 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-[13px] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-            title={layouting ? "Laying out..." : "Auto Layout"}
+            title={layouting ? "Laying out…" : "Auto layout"}
           >
             <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden lg:inline">{layouting ? "Laying out..." : "Layout"}</span>
+            <span className="hidden lg:inline">{layouting ? "Laying out…" : "Layout"}</span>
           </button>
         </>
       )}
@@ -223,6 +240,8 @@ export default function TreePage() {
             onNodeClick={handleNodeClick}
             memoryCounts={memoryCounts}
             selectMode={selectMode}
+            selectedPersonId={selectedPersonId}
+            rootPersonId={localRootId}
           />
         )}
         {selectedPersonId && (() => {
@@ -234,6 +253,7 @@ export default function TreePage() {
               memoryCount={memoryCounts[selectedPersonId] ?? 0}
               onClose={() => setSelectedPersonId(null)}
               onOpenProfile={(id) => router.push(`/person/${id}`)}
+              onSetAsRoot={canEditTree ? () => handleSetAsRoot(selectedPersonId) : undefined}
             />
           );
         })()}
