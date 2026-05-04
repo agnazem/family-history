@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { usePeople } from "@/lib/hooks/usePeople";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
+import { PersonSidePanel } from "@/components/tree/PersonSidePanel";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
 import { BookOpen, UserPlus, GitMerge, LayoutDashboard, Search, X, Users, MousePointer2 } from "lucide-react";
@@ -15,7 +16,6 @@ import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
 import { createClient } from "@/lib/supabase/client";
 import type { PermissionKey } from "@/types";
 import { computeLayout } from "@/lib/layout";
-import type { MemoryType } from "@/types";
 
 export default function TreePage() {
   const router = useRouter();
@@ -26,8 +26,8 @@ export default function TreePage() {
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddRelationship, setShowAddRelationship] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [layouting, setLayouting] = useState(false);
-  const [memoryTypes, setMemoryTypes] = useState<Record<string, MemoryType[]>>({});
   const [memoryCounts, setMemoryCounts] = useState<Record<string, number>>({});
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => searchParams.get("welcome") === "1");
   const [selectMode, setSelectMode] = useState(false);
@@ -39,22 +39,14 @@ export default function TreePage() {
     if (!family?.id) return;
     supabase
       .from("memory_people")
-      .select("person_id, memories!inner(type)")
+      .select("person_id")
       .eq("family_id", family.id)
       .then(({ data }) => {
         if (!data) return;
-        const typeMap: Record<string, MemoryType[]> = {};
         const countMap: Record<string, number> = {};
-        for (const row of data as unknown as { person_id: string; memories: { type: string } | { type: string }[] }[]) {
-          const pid = row.person_id;
-          const mem = Array.isArray(row.memories) ? row.memories[0] : row.memories;
-          if (!mem) continue;
-          const t = mem.type as MemoryType;
-          if (!typeMap[pid]) typeMap[pid] = [];
-          if (!typeMap[pid].includes(t)) typeMap[pid].push(t);
-          countMap[pid] = (countMap[pid] ?? 0) + 1;
+        for (const row of data) {
+          countMap[row.person_id] = (countMap[row.person_id] ?? 0) + 1;
         }
-        setMemoryTypes(typeMap);
         setMemoryCounts(countMap);
       });
   }, [family?.id, people]);
@@ -72,9 +64,9 @@ export default function TreePage() {
 
   const handleNodeClick = useCallback(
     (personId: string) => {
-      router.push(`/person/${personId}`);
+      setSelectedPersonId((prev) => (prev === personId ? null : personId));
     },
-    [router]
+    []
   );
 
   async function handleAutoLayout() {
@@ -233,6 +225,18 @@ export default function TreePage() {
             selectMode={selectMode}
           />
         )}
+        {selectedPersonId && (() => {
+          const person = people.find((p) => p.id === selectedPersonId);
+          if (!person) return null;
+          return (
+            <PersonSidePanel
+              person={person}
+              memoryCount={memoryCounts[selectedPersonId] ?? 0}
+              onClose={() => setSelectedPersonId(null)}
+              onOpenProfile={(id) => router.push(`/person/${id}`)}
+            />
+          );
+        })()}
       </main>
 
       <AddPersonPanel

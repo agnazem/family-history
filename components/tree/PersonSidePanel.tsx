@@ -1,0 +1,110 @@
+"use client";
+
+import { useEffect } from "react";
+import { X, ArrowRight } from "lucide-react";
+import { Avatar } from "@/components/ui/Avatar";
+import type { Person } from "@/types";
+
+interface PersonSidePanelProps {
+  person: Person;
+  memoryCount: number;
+  onClose: () => void;
+  onOpenProfile: (id: string) => void;
+}
+
+function formatYear(dateStr: string | null) {
+  if (!dateStr) return null;
+  return new Date(dateStr).getFullYear();
+}
+
+export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile }: PersonSidePanelProps) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const birthYear = formatYear(person.dob);
+  const deathYear = formatYear(person.dod);
+  const dates =
+    birthYear && deathYear
+      ? `${birthYear} — ${deathYear}`
+      : birthYear
+      ? `b. ${birthYear}`
+      : null;
+
+  const fullName = `${person.first_name} ${person.last_name}`;
+  const blurb = person.ai_summary ?? person.bio ?? null;
+
+  return (
+    <div
+      className="absolute top-0 right-0 h-full w-[300px] bg-[--surface] border-l border-[--rule] flex flex-col z-10"
+      style={{ boxShadow: "-8px 0 24px rgba(31,26,20,0.06)" }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[--rule]">
+        <span className="eyebrow">Selected</span>
+        <button
+          onClick={onClose}
+          className="p-1 rounded-lg text-[--ink-mute] hover:text-[--ink] hover:bg-[--surface-alt] transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-5">
+        {/* Identity */}
+        <div className="flex items-start gap-3">
+          <Avatar src={person.profile_photo_url} name={fullName} size="md" />
+          <div className="min-w-0 flex-1 pt-0.5">
+            <div className="font-display text-[26px] font-normal leading-none text-[--ink] tracking-[-0.02em]">
+              {person.first_name}
+            </div>
+            <div className="font-display italic text-[18px] text-[--ink-soft] leading-tight mt-0.5">
+              {person.last_name}
+            </div>
+            {dates && (
+              <div className="font-mono text-[10px] tracking-[0.06em] text-[--ink-mute] mt-2 uppercase">
+                {dates}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Memory count */}
+        <div
+          className={`rounded-xl px-4 py-3 ${
+            memoryCount > 0 ? "bg-[--accent-soft]" : "bg-[--surface-alt]"
+          }`}
+        >
+          <span className="font-display italic text-[13px] text-[--ink-soft]">
+            {memoryCount > 0
+              ? `${memoryCount} ${memoryCount === 1 ? "memory" : "memories"} recorded`
+              : "No memories yet"}
+          </span>
+        </div>
+
+        {/* Bio / summary */}
+        {blurb && (
+          <p className="text-[13px] leading-[1.6] text-[--ink-soft] line-clamp-5">
+            {blurb}
+          </p>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-5 py-4 border-t border-[--rule]">
+        <button
+          onClick={() => onOpenProfile(person.id)}
+          className="w-full flex items-center justify-center gap-2 bg-[--accent] hover:bg-[--accent-hover] text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          Open profile
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}

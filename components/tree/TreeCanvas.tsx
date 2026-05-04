@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
-  Handle,
-  Position,
   useNodesState,
   useEdgesState,
   type Node,
@@ -22,74 +20,16 @@ import { RelationshipModal } from "./RelationshipModal";
 import type { Person, Relationship } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { debounce } from "@/lib/utils";
+import { useState } from "react";
 
-// ── constants ────────────────────────────────────────────────────────────────
-const NODE_WIDTH = 160;
-const NODE_HEIGHT_APPROX = 110;
-const JUNCTION_SIZE = 20;
-const JUNCTION_Y_OFFSET = NODE_HEIGHT_APPROX / 2 - JUNCTION_SIZE / 2; // ~45
+const nodeTypes = { person: PersonNode };
 
-// ── CoupleJunctionNode ───────────────────────────────────────────────────────
-function CoupleJunctionNode() {
-  return (
-    <>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom"
-        className="!w-2 !h-2 !bg-[--rule] !border-[--rule]"
-      />
-      <div className="w-5 h-5 bg-[--surface] border border-[--rule] rounded-full flex items-center justify-center pointer-events-none select-none">
-        <span className="text-[--gold] text-[8px] leading-none">♥</span>
-      </div>
-    </>
-  );
-}
-
-const nodeTypes = { person: PersonNode, coupleJunction: CoupleJunctionNode };
-
-// ── edge styles ──────────────────────────────────────────────────────────────
 const EDGE_STYLES: Record<string, { stroke: string; strokeWidth: number; strokeDasharray?: string }> = {
   parent_child: { stroke: "#E0D2BB", strokeWidth: 1 },
-  spouse:       { stroke: "#E0D2BB", strokeWidth: 1, strokeDasharray: "4,3" },
+  spouse:       { stroke: "#C2874F", strokeWidth: 1, strokeDasharray: "4 3" },
 };
 
-// ── graph helpers ────────────────────────────────────────────────────────────
-
-type CoupleInfo = {
-  a: string;
-  b: string;
-  relId: string;
-  sharedChildren: string[];
-};
-
-function getCouples(relationships: Relationship[]): CoupleInfo[] {
-  const childrenOf: Record<string, string[]> = {};
-  const parentsOf: Record<string, string[]> = {};
-
-  for (const rel of relationships) {
-    if (rel.type === "parent_child") {
-      if (!childrenOf[rel.person_a_id]) childrenOf[rel.person_a_id] = [];
-      if (!parentsOf[rel.person_b_id]) parentsOf[rel.person_b_id] = [];
-      childrenOf[rel.person_a_id].push(rel.person_b_id);
-      parentsOf[rel.person_b_id].push(rel.person_a_id);
-    }
-  }
-
-  return relationships
-    .filter((r) => r.type === "spouse")
-    .map((r) => {
-      const shared = (childrenOf[r.person_a_id] ?? []).filter((cid) =>
-        (parentsOf[cid] ?? []).includes(r.person_b_id)
-      );
-      return shared.length > 0
-        ? { a: r.person_a_id, b: r.person_b_id, relId: r.id, sharedChildren: shared }
-        : null;
-    })
-    .filter(Boolean) as CoupleInfo[];
-}
-
-function buildPersonNodes(
+function buildNodes(
   people: Person[],
   onNodeClick: (id: string) => void,
   memoryCounts: Record<string, number>
@@ -106,58 +46,15 @@ function buildPersonNodes(
   }));
 }
 
-function computeJunctionNodes(couples: CoupleInfo[], personNodes: Node[]): Node[] {
-  const posMap = new Map(personNodes.map((n) => [n.id, n.position]));
-
-  return couples
-    .map(({ a, b, relId }) => {
-      const posA = posMap.get(a);
-      const posB = posMap.get(b);
-      if (!posA || !posB) return null;
-
-      const junctionX =
-        (posA.x + NODE_WIDTH / 2 + posB.x + NODE_WIDTH / 2) / 2 - JUNCTION_SIZE / 2;
-      const junctionY = posA.y + JUNCTION_Y_OFFSET;
-
-      return {
-        id: `couple-${relId}`,
-        type: "coupleJunction",
-        position: { x: junctionX, y: junctionY },
-        data: {},
-        draggable: false,
-        selectable: false,
-        focusable: false,
-      } as Node;
-    })
-    .filter(Boolean) as Node[];
-}
-
-function buildAllEdges(
+function buildEdges(
   relationships: Relationship[],
-  couples: CoupleInfo[],
   positions: Map<string, { x: number; y: number }>
 ): Edge[] {
-  // Parent→child rels for shared children are replaced by junction→child edges
-  const handledRelIds = new Set<string>();
-  for (const { a, b, sharedChildren } of couples) {
-    for (const rel of relationships) {
-      if (
-        rel.type === "parent_child" &&
-        sharedChildren.includes(rel.person_b_id) &&
-        (rel.person_a_id === a || rel.person_a_id === b)
-      ) {
-        handledRelIds.add(rel.id);
-      }
-    }
-  }
-
   const edges: Edge[] = [];
-
   for (const rel of relationships) {
     if (rel.type === "spouse") {
       const posA = positions.get(rel.person_a_id);
       const posB = positions.get(rel.person_b_id);
-      // Connect inner edges: right side of the left person → left side of the right person
       const aIsLeft = !posA || !posB || posA.x <= posB.x;
       edges.push({
         id: rel.id,
@@ -167,9 +64,8 @@ function buildAllEdges(
         targetHandle: aIsLeft ? "left" : "right-in",
         type: "smoothstep",
         style: EDGE_STYLES.spouse,
-        label: "♥",
       });
-    } else if (rel.type === "parent_child" && !handledRelIds.has(rel.id)) {
+    } else if (rel.type === "parent_child") {
       edges.push({
         id: rel.id,
         source: rel.person_a_id,
@@ -180,38 +76,8 @@ function buildAllEdges(
       });
     }
   }
-
-  // One edge per shared child, all originating from the couple junction
-  for (const { relId, sharedChildren } of couples) {
-    const junctionId = `couple-${relId}`;
-    for (const childId of sharedChildren) {
-      edges.push({
-        id: `${junctionId}-${childId}`,
-        source: junctionId,
-        sourceHandle: "bottom",
-        target: childId,
-        type: "smoothstep",
-        style: EDGE_STYLES.parent_child,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#E0D2BB" },
-      });
-    }
-  }
-
   return edges;
 }
-
-function buildAllNodes(
-  people: Person[],
-  couples: CoupleInfo[],
-  onNodeClick: (id: string) => void,
-  memoryCounts: Record<string, number>
-): Node[] {
-  const personNodes = buildPersonNodes(people, onNodeClick, memoryCounts);
-  const junctionNodes = computeJunctionNodes(couples, personNodes);
-  return [...personNodes, ...junctionNodes];
-}
-
-// ── TreeCanvas ───────────────────────────────────────────────────────────────
 
 interface TreeCanvasProps {
   people: Person[];
@@ -231,30 +97,28 @@ export function TreeCanvas({
   const supabase = createClient();
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
 
-  const couples = useMemo(() => getCouples(relationships), [relationships]);
+  const positions = useMemo(
+    () => new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }])),
+    [people]
+  );
 
-  // All nodes (person + junction) in a single state so React Flow can measure
-  // all of them and route edges correctly.
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    buildAllNodes(people, couples, onNodeClick, memoryCounts)
+    buildNodes(people, onNodeClick, memoryCounts)
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
-    buildAllEdges(relationships, couples, new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }])))
+    buildEdges(relationships, positions)
   );
 
-  // Keep a ref so handleNodesChange can read current positions without a stale closure
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
-  // Sync all nodes when people/relationships change (e.g. after add/edit/auto-layout)
   useMemo(() => {
-    setNodes(buildAllNodes(people, couples, onNodeClick, memoryCounts));
-  }, [people, onNodeClick, memoryCounts, couples, setNodes]);
+    setNodes(buildNodes(people, onNodeClick, memoryCounts));
+  }, [people, onNodeClick, memoryCounts, setNodes]);
 
   useMemo(() => {
-    const positions = new Map(people.map((p) => [p.id, { x: p.canvas_x, y: p.canvas_y }]));
-    setEdges(buildAllEdges(relationships, couples, positions));
-  }, [relationships, couples, people, setEdges]);
+    setEdges(buildEdges(relationships, positions));
+  }, [relationships, positions, setEdges]);
 
   const savePosition = useCallback(
     debounce(async (id: string, x: number, y: number) => {
@@ -268,47 +132,10 @@ export function TreeCanvas({
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // Check for person-node position changes so we can update junction positions
-      // in the same batch (junctions must follow their parents during drag)
-      const personPositionChanges = changes.filter(
-        (c) => c.type === "position" && "id" in c && !String(c.id).startsWith("couple-")
-      );
-
-      if (personPositionChanges.length > 0) {
-        // Build a temporary updated position map
-        const currentNodes = nodesRef.current;
-        const posMap = new Map(currentNodes.map((n) => [n.id, n.position]));
-        for (const c of personPositionChanges) {
-          if (c.type === "position" && c.position) posMap.set(c.id, c.position);
-        }
-
-        // Recompute junction positions from updated person positions
-        const personNodes = currentNodes.filter((n) => !n.id.startsWith("couple-"));
-        const updatedPersonNodes = personNodes.map((n) => ({
-          ...n,
-          position: posMap.get(n.id) ?? n.position,
-        }));
-        const newJunctions = computeJunctionNodes(couples, updatedPersonNodes);
-
-        // Inject junction position changes into the same batch
-        const junctionChanges: NodeChange[] = newJunctions.map((j) => ({
-          type: "position" as const,
-          id: j.id,
-          position: j.position,
-          dragging: false,
-        }));
-
-        onNodesChange([...changes, ...junctionChanges]);
-      } else {
-        onNodesChange(changes);
-      }
-
-      // Persist person node positions to DB after drag ends
+      onNodesChange(changes);
       for (const change of changes) {
         if (
           change.type === "position" &&
-          "id" in change &&
-          !String(change.id).startsWith("couple-") &&
           change.position &&
           !change.dragging
         ) {
@@ -316,7 +143,7 @@ export function TreeCanvas({
         }
       }
     },
-    [onNodesChange, couples, savePosition]
+    [onNodesChange, savePosition]
   );
 
   const handleEdgesChange = useCallback(
@@ -326,7 +153,6 @@ export function TreeCanvas({
 
   const handleEdgeClick = useCallback(
     (_: React.MouseEvent, edge: Edge) => {
-      if (edge.id.startsWith("couple-")) return;
       const rel = relationships.find((r) => r.id === edge.id) ?? null;
       setSelectedRelationship(rel);
     },
