@@ -10,6 +10,7 @@ import { Pencil, Check, X, Send, Trash2, Loader2, Users, Search, RefreshCw } fro
 import { AppNav } from "@/components/ui/AppNav";
 import type { Memory, MemoryComment, Person } from "@/types";
 import { debounce } from "@/lib/utils";
+import { useSignedUrl } from "@/lib/hooks/useSignedUrl";
 
 interface Props {
   memory: Memory;
@@ -111,6 +112,7 @@ export function MemoryDetailClient({
   const supabase = createClient();
 
   const [memory, setMemory] = useState(initialMemory);
+  const mediaSignedUrl = useSignedUrl(memory.storage_url ?? null);
   const [comments, setComments] = useState(initialComments);
 
   // Recorder display name (local, can be updated)
@@ -501,7 +503,7 @@ export function MemoryDetailClient({
             </div>
             <AudioPlayer
               ref={audioPlayerRef}
-              src={memory.storage_url}
+              src={mediaSignedUrl ?? ""}
               playbackRate={playbackRate}
               onTimeUpdate={setCurrentAudioTime}
               onDurationChange={setResolvedDuration}
@@ -615,11 +617,11 @@ export function MemoryDetailClient({
         <div className={memory.type === "photo" ? "lg:grid lg:grid-cols-[1fr_300px] lg:gap-8 items-start" : "flex gap-10 items-start"}>
 
           {/* Photo — fills left column for photo type */}
-          {memory.type === "photo" && memory.storage_url && (
+          {memory.type === "photo" && memory.storage_url && mediaSignedUrl && (
             <div className="overflow-hidden rounded-xl border border-[--rule] mb-6 lg:mb-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={memory.storage_url}
+                src={mediaSignedUrl}
                 alt={memory.title}
                 className="w-full object-contain max-h-[75vh] block"
               />

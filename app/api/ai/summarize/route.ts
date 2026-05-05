@@ -10,6 +10,10 @@ interface MemoryInput {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
@@ -27,23 +31,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing personName" }, { status: 400 });
   }
 
+  const safeName = String(personName).slice(0, 200);
+  const safeBio = bio ? bio.slice(0, 1000) : null;
+  const safeMemories = (memories ?? []).slice(0, 50);
+
   const isDeceased = !!dod;
   const tense = isDeceased ? "past tense" : "present tense where appropriate";
 
   const memoryLines =
-    memories.length === 0
+    safeMemories.length === 0
       ? "No memories have been recorded yet."
-      : memories
+      : safeMemories
           .map(
             (m) =>
-              `- [${m.type}] "${m.title}"${m.date_of_memory ? ` (${m.date_of_memory})` : ""}: ${m.description ?? "(no description)"}`
+              `- [${m.type}] "${m.title}"${m.date_of_memory ? ` (${m.date_of_memory})` : ""}: ${m.description ? m.description.slice(0, 300) : "(no description)"}`
           )
           .join("\n");
 
   const prompt = `You are helping build a family history record. Write a warm, concise summary of this person based on the information provided.
 
-Person: ${personName}${dob ? `, born ${dob}` : ""}${dod ? `, died ${dod}` : ""}
-${bio ? `Bio: ${bio}\n` : ""}
+Person: ${safeName}${dob ? `, born ${dob}` : ""}${dod ? `, died ${dod}` : ""}
+${safeBio ? `Bio: ${safeBio}\n` : ""}
 Memories recorded about them:
 ${memoryLines}
 
@@ -61,7 +69,6 @@ Return only the summary text, no preamble or explanation.`;
 
   // Persist to DB server-side so it survives navigation
   if (personId) {
-    const supabase = await createClient();
     await supabase.from("people").update({ ai_summary: summary }).eq("id", personId);
   }
 
