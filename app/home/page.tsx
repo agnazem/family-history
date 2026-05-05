@@ -171,7 +171,7 @@ export default async function HomePage() {
         weekMemCount: weekCount ?? 0,
         ctas: [
           { id: "record", label: "Record a story", href: "/record" },
-          { id: "photo", label: "Add a photo", href: "/tree" },
+          { id: "photo", label: "Add a photo", href: "/add-photo" },
         ],
       };
     } else if (daysSilent !== null && daysSilent < 7) {
@@ -181,7 +181,7 @@ export default async function HomePage() {
         weekMemCount: weekCount ?? 0,
         ctas: [
           { id: "record", label: "Record a story", href: "/record" },
-          { id: "photo", label: "Add a photo", href: "/tree" },
+          { id: "photo", label: "Add a photo", href: "/add-photo" },
         ],
       };
     } else {
@@ -193,7 +193,7 @@ export default async function HomePage() {
         daysSilent,
         ctas: [
           { id: "record", label: "Record a story", href: "/record" },
-          { id: "photo", label: "Add a photo", href: "/tree" },
+          { id: "photo", label: "Add a photo", href: "/add-photo" },
           { id: "ask", label: `Ask ${subjectName} a question →`, href: `/person/${subject.id}` },
         ],
       };
@@ -268,12 +268,7 @@ export default async function HomePage() {
           <div>
             <GreetingHero {...greeting} />
 
-            <SundayPromptCard
-              question="What's a smell that takes you straight back to your childhood kitchen?"
-              flourishWord="childhood kitchen"
-              helper="One question, every Sunday. Three minutes of audio is plenty."
-              beginHref="/record?prompt=What's+a+smell+that+takes+you+straight+back+to+your+childhood+kitchen?"
-            />
+            <SundayPromptCard />
 
             {/* Recently told */}
             <div className="flex items-baseline gap-4 mb-5">

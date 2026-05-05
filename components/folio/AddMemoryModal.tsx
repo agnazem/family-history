@@ -35,6 +35,7 @@ export function AddMemoryModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioDurationSec, setAudioDurationSec] = useState<number>(0);
   const [file, setFile] = useState<File | null>(null);
   const [taggedIds, setTaggedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -93,6 +94,7 @@ export function AddMemoryModal({
     setTitle("");
     setDescription("");
     setAudioBlob(null);
+    setAudioDurationSec(0);
     setFile(null);
     setTaggedIds(new Set());
     setError(null);
@@ -142,6 +144,7 @@ export function AddMemoryModal({
       fd.append("title", title.trim() || "Voice memory");
       fd.append("storageUrl", storageUrl);
       fd.append("audio", audioBlob, `recording.${ext}`);
+      if (audioDurationSec > 0) fd.append("durationSec", String(audioDurationSec));
       const res = await fetch(`/api/recordings/${recordingId}/finalize`, { method: "POST", body: fd });
       if (!res.ok) { setError("Failed to save recording."); setLoading(false); return; }
 
@@ -229,8 +232,8 @@ export function AddMemoryModal({
         {memType === "audio" && (
           <AudioRecorder
             recorded={audioBlob}
-            onRecorded={setAudioBlob}
-            onClear={() => setAudioBlob(null)}
+            onRecorded={(blob, dur) => { setAudioBlob(blob); setAudioDurationSec(dur); }}
+            onClear={() => { setAudioBlob(null); setAudioDurationSec(0); }}
             recordingId={recordingId ?? undefined}
             liveTranscript={liveTranscript || undefined}
             transcriptStatus={transcriptStatus}

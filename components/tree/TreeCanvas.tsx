@@ -16,6 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PersonNode, type PersonNodeData } from "./PersonNode";
+import { computeLineage, type LineageNode } from "@/lib/tree/lineage";
 import { GenerationHeaderNode } from "./GenerationHeaderNode";
 import { RelationshipModal } from "./RelationshipModal";
 import { computeLayout, NODE_WIDTH } from "@/lib/layout";
@@ -73,6 +74,9 @@ interface TreeCanvasProps {
   selectedPersonId?: string | null;
   rootPersonId?: string | null;
   onGenColumns?: (cols: GenColumn[]) => void;
+  lineageModeEnabled?: boolean;
+  subjectPersonId?: string | null;
+  onClearSubject?: () => void;
 }
 
 export function TreeCanvas({
@@ -84,9 +88,35 @@ export function TreeCanvas({
   selectedPersonId,
   rootPersonId,
   onGenColumns,
+  lineageModeEnabled = false,
+  subjectPersonId,
+  onClearSubject,
 }: TreeCanvasProps) {
   const supabase = createClient();
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
+
+  // Compute lineage set when lineage mode is active
+  const directSet = useMemo<Set<string>>(() => {
+    if (!lineageModeEnabled || !subjectPersonId) return new Set();
+    const lineageNodes: LineageNode[] = people.map((p) => {
+      const parents = relationships
+        .filter((r) => r.type === "parent_child" && r.person_b_id === p.id)
+        .map((r) => r.person_a_id);
+      const spouseRel = relationships.find(
+        (r) => r.type === "spouse" && (r.person_a_id === p.id || r.person_b_id === p.id)
+      );
+      const spouseOf = spouseRel
+        ? (spouseRel.person_a_id === p.id ? spouseRel.person_b_id : spouseRel.person_a_id)
+        : undefined;
+      return { id: p.id, parents, spouseOf };
+    });
+    return computeLineage(subjectPersonId, lineageNodes);
+  }, [lineageModeEnabled, subjectPersonId, people, relationships]);
+
+  const subjectPerson = useMemo(
+    () => subjectPersonId ? people.find((p) => p.id === subjectPersonId) : null,
+    [subjectPersonId, people]
+  );
 
   // Compute layout from relationship graph
   const { positions, genColumns } = useMemo(
@@ -101,18 +131,28 @@ export function TreeCanvas({
 
   // Build person nodes
   const personNodes: Node[] = useMemo(() =>
-    people.map((p) => ({
-      id: p.id,
-      type: "person",
-      position: { x: positions[p.id]?.x ?? p.canvas_x, y: positions[p.id]?.y ?? p.canvas_y },
-      data: {
-        ...p,
-        onClick: onNodeClick,
-        memoryCount: memoryCounts[p.id] ?? 0,
-        isFocused: p.id === selectedPersonId,
-      } as unknown as Record<string, unknown>,
-    })),
-    [people, positions, onNodeClick, memoryCounts, selectedPersonId]
+    people.map((p) => {
+      let tier: "subject" | "direct" | "collateral" | undefined;
+      if (lineageModeEnabled && subjectPersonId) {
+        if (p.id === subjectPersonId) tier = "subject";
+        else if (directSet.has(p.id)) tier = "direct";
+        else tier = "collateral";
+      }
+      return {
+        id: p.id,
+        type: "person",
+        position: { x: positions[p.id]?.x ?? p.canvas_x, y: positions[p.id]?.y ?? p.canvas_y },
+        data: {
+          ...p,
+          onClick: onNodeClick,
+          memoryCount: memoryCounts[p.id] ?? 0,
+          isFocused: p.id === selectedPersonId,
+          tier,
+          lineageModeEnabled,
+        } as unknown as Record<string, unknown>,
+      };
+    }),
+    [people, positions, onNodeClick, memoryCounts, selectedPersonId, lineageModeEnabled, subjectPersonId, directSet]
   );
 
   // Build generation header nodes
@@ -143,7 +183,20 @@ export function TreeCanvas({
   }, [genColumns, people, positions]);
 
   const allNodes = useMemo(() => [...personNodes, ...headerNodes], [personNodes, headerNodes]);
-  const allEdges = useMemo(() => buildEdges(relationships), [relationships]);
+  const allEdges = useMemo(() => {
+    const base = buildEdges(relationships);
+    if (!lineageModeEnabled || directSet.size === 0) return base;
+    return base.map((edge) => {
+      const isSpine =
+        edge.style?.strokeDasharray === undefined && // parent_child only
+        directSet.has(edge.source) &&
+        directSet.has(edge.target);
+      if (isSpine) {
+        return { ...edge, style: { ...edge.style, strokeWidth: 1.5, stroke: "#8A7E69" } };
+      }
+      return { ...edge, style: { ...edge.style, opacity: 0.2 } };
+    });
+  }, [relationships, lineageModeEnabled, directSet]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(allNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(allEdges);
@@ -193,7 +246,24 @@ export function TreeCanvas({
   );
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
+      {/* "Line of X" pill */}
+      {lineageModeEnabled && subjectPerson && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-[--surface] border border-[--rule] rounded-full px-4 py-1.5 shadow-sm">
+          <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-[--ink-mute]">Line of</span>
+          <span className="font-display italic text-[15px] text-[--ink]">
+            {subjectPerson.first_name} {subjectPerson.last_name}
+          </span>
+          {onClearSubject && (
+            <button
+              onClick={onClearSubject}
+              className="font-mono text-[10px] tracking-[0.06em] text-[--accent] hover:text-[--ink] transition-colors ml-1"
+            >
+              ← back
+            </button>
+          )}
+        </div>
+      )}
       <RelationshipModal
         relationship={selectedRelationship}
         people={people}

@@ -27,7 +27,7 @@ export function StoryRow({ id, title, type, durationLabel, byName, era, when }: 
 
   return (
     <Link href={`/memory/${id}`}
-      className="flex items-center gap-4 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-2xl px-5 py-3.5 transition-colors group min-h-[72px]">
+      className="flex items-center gap-4 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-[--radius-lg] px-5 py-3.5 transition-colors group min-h-[72px]">
       <div className="w-14 h-14 rounded-xl bg-[--accent-soft] flex items-center justify-center flex-shrink-0">
         <Icon className="w-5 h-5 text-[--accent]" />
       </div>
@@ -38,7 +38,7 @@ export function StoryRow({ id, title, type, durationLabel, byName, era, when }: 
           <span className="w-1 h-1 rounded-full bg-[--ink-mute] flex-shrink-0" />
           <span className="font-mono text-[11px] text-[--ink-mute] tracking-[0.06em] uppercase truncate">{durationLabel}</span>
         </div>
-        <p className="text-[17px] font-medium text-[--ink] leading-tight truncate mb-0.5">{title}</p>
+        <p className="text-[18px] font-medium text-[--ink] leading-tight truncate mb-0.5">{title}</p>
         <p className="text-[13px] text-[--ink-soft] truncate">
           <span className="italic-flourish">{byName}</span>
           <span className="text-[--ink-mute]"> · {era}</span>
@@ -46,7 +46,7 @@ export function StoryRow({ id, title, type, durationLabel, byName, era, when }: 
       </div>
 
       {type === "audio" && (
-        <div className="hidden lg:flex items-end gap-px w-[120px] h-5 flex-shrink-0">
+        <div className="hidden lg:flex items-end gap-px w-[140px] h-6 flex-shrink-0">
           {heights.map((h, i) => (
             <div key={i} className="flex-1 bg-[--rule] group-hover:bg-[--accent-soft] rounded-[1px] transition-colors" style={{ height: `${h}%` }} />
           ))}

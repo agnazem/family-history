@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { AppNav } from "@/components/ui/AppNav";
+import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import {
-  Mic, Image as ImageIcon, FileText, PenLine,
-  Play, Pause, Download, Users,
+  Mic, Image as ImageIcon, FileText, PenLine, Download, Users,
 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, personDisplayName } from "@/lib/utils";
 import type { Memory, Person } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
@@ -51,8 +51,6 @@ export default function TimelinePage() {
   const { family, loading: familyLoading } = useFamily();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const audioRefs = useRef(new Map<string, HTMLAudioElement>());
   const supabase = createClient();
 
   useEffect(() => {
@@ -99,33 +97,6 @@ export default function TimelinePage() {
 
     load();
   }, [family?.id]);
-
-  function toggleAudio(entry: TimelineEntry) {
-    if (!entry.storage_url) return;
-    const isPlaying = playingId === entry.id;
-
-    if (isPlaying) {
-      audioRefs.current.get(entry.id)?.pause();
-      setPlayingId(null);
-      return;
-    }
-
-    // Pause any currently playing
-    if (playingId) audioRefs.current.get(playingId)?.pause();
-
-    if (!audioRefs.current.has(entry.id)) {
-      const audio = new Audio();
-      const source = document.createElement("source");
-      source.src = entry.storage_url!;
-      const ext = entry.storage_url!.split("?")[0].split(".").pop()?.toLowerCase();
-      source.type = ext === "mp4" ? "audio/mp4" : ext === "ogg" ? "audio/ogg" : "audio/webm";
-      audio.appendChild(source);
-      audio.onended = () => setPlayingId(null);
-      audioRefs.current.set(entry.id, audio);
-    }
-    audioRefs.current.get(entry.id)!.play().catch(() => {});
-    setPlayingId(entry.id);
-  }
 
   if (familyLoading || loading) {
     return (
@@ -175,30 +146,21 @@ export default function TimelinePage() {
                         className="bg-[--surface] border border-[--rule] rounded-xl p-5 hover:border-[--gold] transition-colors"
                       >
                         <div className="flex items-start gap-3">
-                          <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-[--ink-mute]" />
+                          <Icon className="w-4 h-4 mt-1 flex-shrink-0 text-[--ink-mute]" />
                           <div className="flex-1 min-w-0">
                             <span className="eyebrow">{TYPE_LABELS[entry.type]}</span>
                             <Link
                               href={`/memory/${entry.id}`}
-                              className="block font-display text-[20px] leading-[1.2] font-normal text-[--ink] mt-0.5 hover:text-[--accent] transition-colors"
+                              className="block font-display text-[22px] leading-[1.2] font-normal text-[--ink] mt-0.5 hover:text-[--accent] transition-colors"
                             >
                               {entry.title}
                             </Link>
-                            <p className="text-[13px] text-[--ink-mute] mt-0.5">
+                            <p className="body-sm mt-1">
                               {formatDate(entry.date_of_memory ?? entry.created_at)}
                             </p>
 
                             {entry.type === "audio" && entry.storage_url && (
-                              <button
-                                onClick={() => toggleAudio(entry)}
-                                className="flex items-center gap-1.5 mt-3 text-xs font-medium bg-[--accent] text-white px-3 py-1.5 rounded-lg hover:bg-[--accent-hover] transition-colors"
-                              >
-                                {playingId === entry.id ? (
-                                  <><Pause className="w-3.5 h-3.5" /> Pause</>
-                                ) : (
-                                  <><Play className="w-3.5 h-3.5" /> Play</>
-                                )}
-                              </button>
+                              <AudioPlayer src={entry.storage_url} className="mt-3" />
                             )}
 
                             {entry.type === "photo" && entry.storage_url && (
@@ -225,7 +187,13 @@ export default function TimelinePage() {
                               </a>
                             )}
 
-                            {entry.description && (
+                            {entry.transcript && (
+                              <p className="text-[14px] leading-[1.5] text-[--ink-soft] mt-2 line-clamp-3">
+                                {entry.transcript}
+                              </p>
+                            )}
+
+                            {!entry.transcript && entry.description && (
                               <p className="text-[14px] leading-[1.5] text-[--ink-soft] mt-2">
                                 {entry.description}
                               </p>
@@ -234,19 +202,17 @@ export default function TimelinePage() {
                             {entry.taggedPeople.length > 0 && (
                               <p className="flex items-center gap-1.5 mt-2 text-[13px] text-[--ink-mute]">
                                 <Users className="w-3 h-3 flex-shrink-0" />
-                                {entry.taggedPeople.map((p) => (
-                                  <button
-                                    key={p.id}
-                                    onClick={() => router.push(`/person/${p.id}`)}
-                                    className="hover:text-[--ink] hover:underline transition-colors"
-                                  >
-                                    {p.first_name} {p.last_name}
-                                  </button>
-                                )).reduce<React.ReactNode[]>((acc, el, i) => {
-                                  if (i > 0) acc.push(<span key={`sep-${i}`}>, </span>);
-                                  acc.push(el);
-                                  return acc;
-                                }, [])}
+                                {entry.taggedPeople.map((p, i) => (
+                                  <span key={p.id}>
+                                    {i > 0 && ", "}
+                                    <button
+                                      onClick={() => router.push(`/person/${p.id}`)}
+                                      className="hover:text-[--ink] hover:underline transition-colors"
+                                    >
+                                      {personDisplayName(p)}
+                                    </button>
+                                  </span>
+                                ))}
                               </p>
                             )}
                           </div>

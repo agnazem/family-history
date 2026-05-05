@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Search, X, User, Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { personDisplayName } from "@/lib/utils";
 import Image from "next/image";
 import type { Memory, Person } from "@/types";
 
@@ -34,7 +35,7 @@ function normalize(s: string) {
 }
 
 function matchesPerson(p: Person, q: string) {
-  const n = normalize(`${p.first_name} ${p.last_name} ${p.bio ?? ""}`);
+  const n = normalize(`${p.first_name} ${p.last_name} ${p.nickname ?? ""} ${p.bio ?? ""}`);
   return q.split(/\s+/).every((word) => n.includes(word));
 }
 
@@ -173,12 +174,12 @@ export function SearchModal({
                 >
                   <Avatar
                     src={p.profile_photo_url}
-                    name={`${p.first_name} ${p.last_name}`}
+                    name={personDisplayName(p)}
                     size="sm"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">
-                      {p.first_name} {p.last_name}
+                      {personDisplayName(p)}
                     </p>
                     {p.bio && (
                       <p className="text-xs text-gray-500 truncate">{p.bio}</p>
@@ -229,7 +230,7 @@ export function SearchModal({
                       <p className="text-sm font-medium text-gray-900 truncate">{m.title}</p>
                       <p className="text-xs text-gray-500">
                         {MEMORY_TYPE_LABELS[m.type]}
-                        {person && ` · ${person.first_name} ${person.last_name}`}
+                        {person && ` · ${personDisplayName(person)}`}
                       </p>
                       {m.description && (
                         <p className="text-xs text-gray-400 truncate mt-0.5">{m.description}</p>

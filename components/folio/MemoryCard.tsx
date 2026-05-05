@@ -1,7 +1,7 @@
 "use client";
 
 import { Mic, Image as ImageIcon, FileText, PenLine, Download, Users } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, personDisplayName } from "@/lib/utils";
 import { AudioPlayer } from "@/components/folio/AudioPlayer";
 import type { Memory, Person } from "@/types";
 import Image from "next/image";
@@ -93,7 +93,7 @@ export function MemoryCard({ memory, taggedPeople, onClick }: MemoryCardProps) {
           {taggedPeople && taggedPeople.length > 0 && (
             <p className="flex items-center gap-1.5 mt-2 text-[13px] text-[--ink-mute]">
               <Users className="w-3 h-3 flex-shrink-0" />
-              {taggedPeople.map((p) => `${p.first_name} ${p.last_name}`).join(", ")}
+              {taggedPeople.map((p) => personDisplayName(p)).join(", ")}
             </p>
           )}
         </div>

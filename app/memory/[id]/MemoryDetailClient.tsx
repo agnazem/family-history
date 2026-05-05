@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AudioPlayer, type AudioPlayerRef } from "@/components/folio/AudioPlayer";
 import { Avatar } from "@/components/ui/Avatar";
-import { formatDate } from "@/lib/utils";
+import { formatDate, personDisplayName } from "@/lib/utils";
 import { Pencil, Check, X, Send, Trash2, Loader2, Users, Search, RefreshCw } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
 import type { Memory, MemoryComment, Person } from "@/types";
@@ -65,19 +65,32 @@ function buildParagraphs(transcript: string, durationSec: number | null): Transc
   if (!transcript.trim()) return [];
   const dur = durationSec ?? 0;
   const total = transcript.length;
-  // Prefer double-newline splits; fall back to single newlines (Whisper rarely adds double breaks)
-  const parts = /\n\n/.test(transcript)
-    ? transcript.split(/\n\n+/)
-    : transcript.split(/\n/);
+
+  let parts: string[];
+  if (/\n\n/.test(transcript)) {
+    parts = transcript.split(/\n\n+/);
+  } else if (/\n/.test(transcript)) {
+    parts = transcript.split(/\n/);
+  } else {
+    // Whisper often emits one long block — split into ~4-sentence groups
+    const sentences = transcript.match(/[^.!?]+[.!?]+(?=\s|$)/g) ?? [transcript];
+    const GROUP = 4;
+    parts = [];
+    for (let i = 0; i < sentences.length; i += GROUP) {
+      parts.push(sentences.slice(i, i + GROUP).map((s) => s.trim()).join(" "));
+    }
+  }
+
   let searchFrom = 0;
   const result: TranscriptParagraph[] = [];
   for (const part of parts) {
     const text = part.trim();
     if (!text) { searchFrom += part.length + 1; continue; }
     const idx = transcript.indexOf(text, searchFrom);
-    const startTime = dur > 0 && total > 0 ? (idx / total) * dur : 0;
+    const pos = idx >= 0 ? idx : searchFrom;
+    const startTime = dur > 0 && total > 0 ? (pos / total) * dur : 0;
     result.push({ text, startTime });
-    searchFrom = idx + text.length;
+    searchFrom = pos + text.length;
   }
   return result;
 }
@@ -141,6 +154,9 @@ export function MemoryDetailClient({
   // Summary
   const [summarizing, setSummarizing] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryDraft, setSummaryDraft] = useState(initialMemory.transcript_summary ?? "");
+  const [savingSummary, setSavingSummary] = useState(false);
 
   // Delete confirmation
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -182,6 +198,11 @@ export function MemoryDetailClient({
 
     return () => { supabase.removeChannel(channel); };
   }, [memory.id, memory.transcript_status]);
+
+  // Keep summaryDraft in sync when summary updates (e.g. after regeneration)
+  useEffect(() => {
+    setSummaryDraft(memory.transcript_summary ?? "");
+  }, [memory.transcript_summary]);
 
   // Auto-generate summary for long transcripts (lazy, cached)
   useEffect(() => {
@@ -229,6 +250,32 @@ export function MemoryDetailClient({
       .update({ transcript: transcriptDraft, transcript_draft: null })
       .eq("id", memory.id);
     setMemory((prev) => ({ ...prev, transcript: transcriptDraft, transcript_draft: null }));
+  }
+
+  async function saveSummary() {
+    setSavingSummary(true);
+    await supabase
+      .from("memories")
+      .update({ transcript_summary: summaryDraft || null })
+      .eq("id", memory.id);
+    setMemory((prev) => ({ ...prev, transcript_summary: summaryDraft || null }));
+    setSavingSummary(false);
+    setEditingSummary(false);
+  }
+
+  async function regenerateSummary() {
+    setSummarizing(true);
+    setEditingSummary(false);
+    try {
+      const res = await fetch(`/api/memories/${memory.id}/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
+      const { summary } = await res.json();
+      if (summary) setMemory((prev) => ({ ...prev, transcript_summary: summary }));
+    } catch { /* ignore */ }
+    setSummarizing(false);
   }
 
   async function saveTitle() {
@@ -373,7 +420,7 @@ export function MemoryDetailClient({
 
   const filteredPeople = tagSearch.trim()
     ? allPeople.filter((p) =>
-        `${p.first_name} ${p.last_name}`.toLowerCase().includes(tagSearch.toLowerCase())
+        `${p.first_name} ${p.last_name} ${p.nickname ?? ""}`.toLowerCase().includes(tagSearch.toLowerCase())
       )
     : allPeople;
 
@@ -405,7 +452,7 @@ export function MemoryDetailClient({
                 value={titleDraft}
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-                className="flex-1 font-display text-[clamp(28px,5vw,56px)] leading-[1.05] tracking-[-0.02em] bg-transparent border-b-2 border-[--gold] outline-none text-[--ink]"
+                className="flex-1 font-display text-[clamp(40px,7vw,88px)] leading-[1.05] tracking-[-0.02em] bg-transparent border-b-2 border-[--gold] outline-none text-[--ink]"
               />
               <button onClick={saveTitle} className="p-2 text-[--gold] hover:text-[--ink] transition-colors">
                 <Check className="w-5 h-5" />
@@ -416,7 +463,7 @@ export function MemoryDetailClient({
             </div>
           ) : (
             <div className="flex-1 flex items-start gap-3 group">
-              <h1 className="font-display text-[clamp(28px,5vw,56px)] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">
+              <h1 className="font-display text-[clamp(40px,7vw,88px)] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">
                 {memory.title}
               </h1>
               {canEdit && (
@@ -498,8 +545,8 @@ export function MemoryDetailClient({
                   onClick={() => router.push(`/person/${person.id}?from=memory/${memory.id}`)}
                   className="flex items-center gap-2 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-full pl-1 pr-3 py-1 transition-colors"
                 >
-                  <Avatar src={person.profile_photo_url} name={`${person.first_name} ${person.last_name}`} size="xs" />
-                  <span className="text-sm text-[--ink]">{person.first_name} {person.last_name}</span>
+                  <Avatar src={person.profile_photo_url} name={personDisplayName(person)} size="xs" />
+                  <span className="text-sm text-[--ink]">{personDisplayName(person)}</span>
                 </button>
               ))}
               {canEdit && (
@@ -544,7 +591,7 @@ export function MemoryDetailClient({
                       }`}
                     >
                       {selected && <Check className="w-3 h-3" />}
-                      {p.first_name} {p.last_name}
+                      {personDisplayName(p)}
                     </button>
                   );
                 })}
@@ -564,10 +611,23 @@ export function MemoryDetailClient({
           )}
         </div>
 
-        {/* Two-column layout */}
-        <div className="flex gap-10 items-start">
-          {/* Transcript — left, 60ch */}
-          <div className="flex-1 min-w-0">
+        {/* Content layout */}
+        <div className={memory.type === "photo" ? "lg:grid lg:grid-cols-[1fr_300px] lg:gap-8 items-start" : "flex gap-10 items-start"}>
+
+          {/* Photo — fills left column for photo type */}
+          {memory.type === "photo" && memory.storage_url && (
+            <div className="overflow-hidden rounded-xl border border-[--rule] mb-6 lg:mb-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={memory.storage_url}
+                alt={memory.title}
+                className="w-full object-contain max-h-[75vh] block"
+              />
+            </div>
+          )}
+
+          {/* Transcript — left, 60ch (audio + notes only) */}
+          {(memory.type === "audio" || memory.type === "note") && <div className="flex-1 min-w-0">
             {(() => {
               const wordCount = memory.transcript ? memory.transcript.trim().split(/\s+/).length : 0;
               const isLong = memory.transcript_status === "ready" && wordCount >= 300;
@@ -579,9 +639,77 @@ export function MemoryDetailClient({
 
               return (
                 <>
+                  {/* ── SUMMARY SECTION (long transcripts only) ── */}
+                  {isLong && (summarizing || hasSummary) && (
+                    <div className="mb-8">
+                      {/* Summary header with its own controls */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <p className="eyebrow">Summary</p>
+                        {canEdit && !summarizing && hasSummary && !editingSummary && (
+                          <>
+                            <button
+                              onClick={() => setEditingSummary(true)}
+                              className="p-1 text-[--ink-mute] hover:text-[--ink] transition-colors rounded"
+                              title="Edit summary"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={regenerateSummary}
+                              className="p-1 text-[--ink-mute] hover:text-[--ink] transition-colors rounded"
+                              title="Regenerate summary from transcript"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                        {canEdit && editingSummary && (
+                          <button
+                            onClick={saveSummary}
+                            disabled={savingSummary}
+                            className="flex items-center gap-1 text-[10px] font-mono text-[--gold] hover:text-[--ink] disabled:opacity-50 transition-colors"
+                          >
+                            {savingSummary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            Save
+                          </button>
+                        )}
+                        {canEdit && editingSummary && (
+                          <button
+                            onClick={() => { setEditingSummary(false); setSummaryDraft(memory.transcript_summary ?? ""); }}
+                            className="p-1 text-[--ink-mute] hover:text-[--ink] transition-colors rounded"
+                            title="Cancel"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      {summarizing ? (
+                        <div className="space-y-2 animate-pulse">
+                          <div className="h-4 bg-[--rule] rounded w-3/4" />
+                          <div className="h-4 bg-[--rule] rounded w-full" />
+                          <div className="h-4 bg-[--rule] rounded w-2/3" />
+                        </div>
+                      ) : editingSummary ? (
+                        <textarea
+                          value={summaryDraft}
+                          onChange={(e) => setSummaryDraft(e.target.value)}
+                          rows={4}
+                          className="w-full font-display text-[17px] font-light leading-[1.6] text-[--ink] max-w-[60ch] border border-[--rule] bg-[--canvas] rounded-lg px-3 py-2 focus:outline-none focus:border-[--gold] resize-none"
+                        />
+                      ) : (
+                        <p className="text-[17px] leading-[1.6] text-[--ink] max-w-[60ch]">
+                          {memory.transcript_summary}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── FULL TRANSCRIPT SECTION ── */}
+                  {/* Header: "Full transcript" when summary exists, "Transcript" when not */}
                   <div className="flex items-center gap-2 mb-4">
-                    <p className="eyebrow">Transcript</p>
-                    {/* Edit/done toggle for canEdit users when transcript is ready */}
+                    <p className="eyebrow">{isLong && hasSummary ? "Full transcript" : "Transcript"}</p>
+                    {/* Edit/done toggle */}
                     {canEdit && memory.transcript_status === "ready" && !transcriptEditMode && !showLiveIndicator && (
                       <button
                         onClick={() => setTranscriptEditMode(true)}
@@ -600,13 +728,13 @@ export function MemoryDetailClient({
                         Done
                       </button>
                     )}
-                    {/* Re-transcribe: opens inline confirmation before overwriting */}
+                    {/* Re-transcribe */}
                     {canEdit && memory.transcript_status === "ready" && memory.storage_url && !transcriptEditMode && !showLiveIndicator && !confirmingRetranscribe && (
                       <button
                         onClick={() => setConfirmingRetranscribe(true)}
                         disabled={retranscribing}
                         className="p-1 text-[--ink-mute] hover:text-[--ink] disabled:opacity-40 transition-colors rounded"
-                        title="Re-run transcription"
+                        title="Re-run transcription from audio"
                       >
                         <RefreshCw className={`w-3 h-3 ${retranscribing ? "animate-spin" : ""}`} />
                       </button>
@@ -625,6 +753,16 @@ export function MemoryDetailClient({
                         <Check className="w-3 h-3" />
                         Saved
                       </span>
+                    )}
+                    {/* Collapse toggle when summary is shown */}
+                    {isLong && hasSummary && !transcriptEditMode && (
+                      <button
+                        onClick={() => setSummaryExpanded((v) => !v)}
+                        className="ml-auto flex items-center gap-1 text-[11px] font-mono text-[--ink-mute] hover:text-[--ink] transition-colors"
+                      >
+                        <span className={`transition-transform inline-block ${summaryExpanded ? "rotate-180" : ""}`}>▼</span>
+                        {summaryExpanded ? "Hide" : `Show · ${wordCount.toLocaleString()} words`}
+                      </button>
                     )}
                   </div>
 
@@ -651,7 +789,7 @@ export function MemoryDetailClient({
                     </div>
                   )}
 
-                  {/* Undo banner — visible for 30s after a successful re-transcription */}
+                  {/* Undo banner */}
                   {previousTranscript !== null && (
                     <div className="flex items-center justify-between gap-3 mb-4 bg-[--accent-soft] border border-[--rule] rounded-xl px-4 py-3">
                       <p className="text-[13px] text-[--ink-soft]">Transcript updated from audio.</p>
@@ -664,36 +802,12 @@ export function MemoryDetailClient({
                     </div>
                   )}
 
-                  {/* Summary section for long transcripts */}
-                  {isLong && (summarizing || hasSummary) && (
-                    <div className="mb-6">
-                      {summarizing && !hasSummary ? (
-                        <div className="space-y-2 animate-pulse">
-                          <div className="h-4 bg-[--rule] rounded w-3/4" />
-                          <div className="h-4 bg-[--rule] rounded w-full" />
-                          <div className="h-4 bg-[--rule] rounded w-2/3" />
-                        </div>
-                      ) : (
-                        <p className="text-[17px] leading-[1.6] text-[--ink] max-w-[60ch]">
-                          {memory.transcript_summary}
-                        </p>
-                      )}
-                      <button
-                        onClick={() => setSummaryExpanded((v) => !v)}
-                        className="mt-3 flex items-center gap-1.5 text-[13px] font-mono text-[--ink-mute] hover:text-[--ink] transition-colors"
-                      >
-                        <span className={`transition-transform ${summaryExpanded ? "rotate-180" : ""}`}>▼</span>
-                        {summaryExpanded ? "Hide" : "Read full transcript"} ({wordCount.toLocaleString()} words)
-                      </button>
-                    </div>
-                  )}
-
                   {/* Full transcript — always visible if short, collapsible if long */}
                   {(!isLong || !hasSummary || summaryExpanded) && (
                     <>
                       {/* Live / streaming: plain text only */}
                       {showLiveIndicator && (
-                        <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                        <p className="font-display text-[22px] font-light leading-[1.65] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
                           {memory.transcript || <span className="text-[--ink-mute] italic">Transcribing…</span>}
                         </p>
                       )}
@@ -710,20 +824,20 @@ export function MemoryDetailClient({
                                 onClick={() => audioPlayerRef.current?.seekTo(para.startTime)}
                                 className={`group relative rounded-lg px-3 py-2 cursor-pointer transition-colors ${
                                   isActive
-                                    ? "bg-[--accent-soft]"
+                                    ? "bg-[--accent-soft] border-l-2 border-[--accent]"
                                     : "hover:bg-[--surface-alt]"
                                 }`}
                               >
-                                <span
-                                  className={`block font-mono text-[10px] tracking-[0.04em] mb-1 transition-opacity ${
-                                    isActive
-                                      ? "text-[--accent] opacity-100"
-                                      : "text-[--gold] opacity-0 group-hover:opacity-100"
-                                  }`}
-                                >
-                                  {fmtTime(para.startTime)}
-                                </span>
-                                <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                                <p className="font-display text-[22px] font-light leading-[1.65] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                                  <span
+                                    className={`font-mono text-[11px] tracking-[0.06em] mr-3 transition-opacity ${
+                                      isActive
+                                        ? "text-[--accent] opacity-100"
+                                        : "text-[--ink-mute] opacity-0 group-hover:opacity-100"
+                                    }`}
+                                  >
+                                    {fmtTime(para.startTime)}
+                                  </span>
                                   {para.text}
                                 </p>
                               </div>
@@ -740,13 +854,13 @@ export function MemoryDetailClient({
                           onBlur={commitTranscript}
                           placeholder={memory.transcript_status === "none" ? "No transcript yet. You can type one here." : ""}
                           rows={Math.max(12, transcriptDraft.split("\n").length + 2)}
-                          className="w-full min-h-[20rem] text-[17px] leading-[1.55] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
+                          className="w-full min-h-[20rem] font-display text-[22px] font-light leading-[1.65] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
                         />
                       )}
 
                       {/* Plain text — non-audio memories or when audio has no duration yet */}
                       {!showLiveIndicator && !showClickable && !showTextarea && (
-                        <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                        <p className="font-display text-[22px] font-light leading-[1.65] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
                           {memory.transcript || (
                             <span className="text-[--ink-mute] italic">
                               {memory.transcript_status === "none" ? "No transcript yet." : "Transcribing…"}
@@ -765,13 +879,13 @@ export function MemoryDetailClient({
                 </>
               );
             })()}
-          </div>
+          </div>}
 
           {/* Sidebar — right, 280px, sticky */}
-          <aside className="hidden lg:block w-[280px] flex-shrink-0 sticky top-16">
+          <aside className={`${memory.type === "photo" ? "block" : "hidden lg:block w-[280px] flex-shrink-0"} sticky top-16`}>
             {/* About this recording */}
             <div className="bg-[--surface] border border-[--rule] rounded-xl p-5 mb-4">
-              <p className="eyebrow mb-3">About this recording</p>
+              <p className="eyebrow mb-3">About this {memory.type === "audio" ? "recording" : memory.type === "photo" ? "photo" : memory.type === "document" ? "document" : "note"}</p>
               <dl className="space-y-3 text-sm">
                 {/* Date of memory — editable */}
                 <div>
@@ -809,6 +923,32 @@ export function MemoryDetailClient({
                     <dd className="text-[--ink] mt-0.5">{fmtDuration(memory.duration_sec)}</dd>
                   </div>
                 )}
+
+                {/* Place & time */}
+                <div className="pt-1 border-t border-[--rule]">
+                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-1">Place &amp; time</dt>
+                  <dd className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-[--ink-mute] w-14">Year</span>
+                      <span className="text-[14px] font-medium text-[--ink]">
+                        {(() => {
+                          const d = memory.date_of_memory || memory.recorded_at;
+                          return d ? new Date(d).getFullYear() : "—";
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-[12px] text-[--ink-mute] w-14 mt-0.5">Place</span>
+                      <span className="text-[14px] font-medium text-[--ink] flex-1">
+                        {memory.location || "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-[--ink-mute] w-14">Season</span>
+                      <span className="text-[14px] font-medium text-[--ink]">—</span>
+                    </div>
+                  </dd>
+                </div>
 
                 {/* Recorded by — editable */}
                 <div>
@@ -880,9 +1020,11 @@ export function MemoryDetailClient({
 
             {/* Comments */}
             <div className="bg-[--surface] border border-[--rule] rounded-xl p-5">
-              <p className="eyebrow mb-3">
-                Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
-              </p>
+              <div className="flex items-baseline gap-4 mb-4">
+                <h3 className="font-display italic text-[24px] font-normal text-[--ink] leading-none">Family said</h3>
+                <div className="flex-1 h-px bg-[--rule]" />
+                {comments.length > 0 && <span className="eyebrow">{comments.length}</span>}
+              </div>
 
               {topLevelComments.length > 0 && (
                 <div className="space-y-4 mb-4">
@@ -980,10 +1122,10 @@ export function MemoryDetailClient({
           </aside>
         </div>
 
-        {/* Mobile: comments below transcript */}
-        <div className="lg:hidden mt-10">
+        {/* Mobile: about + comments below transcript (non-photo only — photos show aside inline) */}
+        {memory.type !== "photo" && <div className="lg:hidden mt-10">
           <div className="bg-[--surface] border border-[--rule] rounded-xl p-5 mb-4">
-            <p className="eyebrow mb-3">About this recording</p>
+            <p className="eyebrow mb-3">About this {memory.type === "audio" ? "recording" : memory.type === "document" ? "document" : "note"}</p>
             <dl className="space-y-3 text-sm">
               <div>
                 <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-0.5">Date</dt>
@@ -1061,7 +1203,11 @@ export function MemoryDetailClient({
           </div>
 
           <div className="bg-[--surface] border border-[--rule] rounded-xl p-5">
-            <p className="eyebrow mb-3">Comments{comments.length > 0 ? ` · ${comments.length}` : ""}</p>
+            <div className="flex items-baseline gap-4 mb-4">
+              <h3 className="font-display italic text-[24px] font-normal text-[--ink] leading-none">Family said</h3>
+              <div className="flex-1 h-px bg-[--rule]" />
+              {comments.length > 0 && <span className="eyebrow">{comments.length}</span>}
+            </div>
             {topLevelComments.length > 0 && (
               <div className="space-y-4 mb-4">
                 {topLevelComments.map((c) => (
@@ -1124,7 +1270,7 @@ export function MemoryDetailClient({
               </button>
             )
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

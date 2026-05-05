@@ -2,6 +2,14 @@
 
 ## P1
 
+### Security audit — storage buckets and access control
+**What:** Verify that the `photos`, `audio`, and `artifacts` Supabase storage buckets are configured as intended (public vs. private), and that `getPublicUrl` is the correct access pattern for each. Also review the open items flagged during the v0.2.0.0 adversarial review:
+- Confirm bucket public/private status in Supabase dashboard — if private, replace `getPublicUrl` with a signed-URL or authenticated-URL pattern across all 6 call sites (`app/record/page.tsx`, `app/person/[id]/page.tsx`, `app/person/[id]/edit/page.tsx`, `app/add-photo/page.tsx`, `components/folio/AddMemoryModal.tsx`, `components/folio/TellMeModal.tsx`)
+- Add in-function `canEdit` guards to `saveSummary`, `saveTitle`, `saveDescription`, `saveDate`, and `saveRecorder` in `MemoryDetailClient.tsx` (currently only gated in JSX, RLS is the backstop)
+- Review all other API routes for consistent permission checks (recorder vs. admin vs. any family member)
+**Why:** These were flagged as low-to-medium severity during ship but not fixed — worth a dedicated pass before adding more users to the family.
+**Effort:** M (human: ~2h / CC: ~20 min)
+
 ## P2
 
 ### Soft-delete / trash for people
@@ -31,11 +39,30 @@
 **Spec:** `handoff/CLAUDE.md` §3, `handoff/prompts-seed.md`
 **Depends on:** Phase 2 memory detail (shipped), transactional email setup
 
-### Tree visualization upgrade
-**What:** Update the `@xyflow/react` tree nodes to the Folio hairline aesthetic — cream surface, hairline border, name in Fraunces, dates in DM Mono. Connection lines: `stroke="#E0D2BB"`, `strokeWidth={1}`.
-**Why:** The current node look doesn't match the rest of the app after the visual refresh.
-**Effort:** S (human: ~half day / CC: ~10 min)
-**Depends on:** Visual refresh (shipped)
+
+### Memory detail — Threads (topic tags)
+**What:** Topic/theme tag chips on the memory detail right rail (e.g. "Family · Russo line", "Childhood", "Brooklyn"). Needs a `memory_tags` table and tag assignment UI.
+**Why:** The v2 design mock shows these as a way to browse memories by theme across the archive.
+**Effort:** M (human: ~1 day / CC: ~20 min)
+**Depends on:** Memory detail v2 style pass (ships without this)
+
+### Mobile bottom nav bar
+**What:** A 5-item bottom navigation bar (Home / Tree / mic-FAB / People / Saved) to replace the current single sticky record button on mobile. FAB floats 18px above the bar.
+**Why:** The v2 design mock specifies this as the mobile chrome. The current sticky record button is functional but doesn't match the intended mobile navigation pattern.
+**Effort:** M (human: ~half day / CC: ~15 min)
+**Depends on:** Routes for "People" and "Saved" need to exist (stubs acceptable at first)
+
+### Mobile Home — responsive polish
+**What:** Responsive variant of Home: greeting shrinks to 36–44px, action row becomes 2×2 grid, story rows drop waveform, prompt card becomes full-width CTA.
+**Why:** The v2 design mock (screens/mobile.jsx) specifies these breakpoint changes.
+**Effort:** S (human: ~2h / CC: ~10 min)
+**Depends on:** Mobile bottom nav bar
+
+### Mobile Record — responsive polish
+**What:** Compact recording layout on mobile — transcript scrollable above fold, waveform + pause/stop controls pinned to bottom.
+**Why:** The v2 design mock specifies this layout for the recording flow.
+**Effort:** S (human: ~2h / CC: ~10 min)
+**Depends on:** Record right-rail (desktop, shipped first)
 
 ### Mention auto-detection in transcripts
 **What:** Typing `@` in a transcript opens a person picker; inserts as `@[Name](person:id)` markdown link that the renderer understands as a tagged person.
@@ -55,4 +82,20 @@
 **Effort:** M (human: ~1 day / CC: ~20 min)
 **Depends on:** Design token system stable (shipped)
 
+### Photos tab on person page may be redundant
+**What:** The Photos tab on a person's page surfaces photos tagged with that person. However, photos are already browsable on the Memories tab. Consider removing the Photos tab to reduce nav clutter and consolidate photo browsing under Memories.
+**Why:** Simpler navigation; photos are memories, so they belong on the Memories tab.
+**Effort:** XS (human: ~30 min / CC: ~5 min)
+**Depends on:** Confirm no user research showing Photos tab has distinct value
+
+### Redundant action buttons on record / present page
+**What:** The record flow and present (memory detail?) page have duplicate or redundant edit, delete, and record buttons that create visual clutter and confuse affordances.
+**Why:** Each action should appear once, in the most logical place.
+**Effort:** S (human: ~1h / CC: ~10 min)
+**Depends on:** Design audit of which buttons are truly needed per page state
+
 ## Done
+
+### Tree visualization upgrade
+**What:** Updated `@xyflow/react` tree nodes to the Folio hairline aesthetic — cream surface, hairline border, name in Fraunces, dates in DM Mono. Connection lines: `stroke="#E0D2BB"`, `strokeWidth={1}`.
+**Completed:** v0.2.0.0 (2026-05-04)
