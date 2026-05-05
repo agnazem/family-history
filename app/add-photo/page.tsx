@@ -63,7 +63,7 @@ export default function AddPhotoPage() {
 
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${finalLat}&lon=${finalLng}&format=json`,
-          { headers: { "Accept-Language": "en" } }
+          { headers: { "Accept-Language": "en", "User-Agent": "Folio Family History App" } }
         ).catch(() => null);
         if (res?.ok) {
           const geo = await res.json();
@@ -73,7 +73,7 @@ export default function AddPhotoPage() {
             addr.state,
             addr.country,
           ].filter(Boolean);
-          if (parts.length) result.location = parts.join(", ");
+          if (parts.length) result.location = parts.join(", ").slice(0, 200);
         }
       }
 

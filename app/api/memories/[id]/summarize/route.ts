@@ -18,7 +18,7 @@ export async function POST(
 
   const { data: memory } = await supabase
     .from("memories")
-    .select("transcript, transcript_summary, family_id, title")
+    .select("transcript, transcript_summary, family_id, title, recorded_by")
     .eq("id", memoryId)
     .single();
 
@@ -36,14 +36,20 @@ export async function POST(
     return NextResponse.json({ error: "Transcript too short to summarize" }, { status: 400 });
   }
 
-  // Verify family membership
+  // Verify family membership and write permission (recorder or admin)
   const { data: membership } = await supabase
     .from("family_members")
-    .select("id")
+    .select("id, role")
     .eq("family_id", memory.family_id)
     .eq("user_id", user.id)
     .single();
   if (!membership) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+  const isRecorder = memory.recorded_by === user.id;
+  const isAdmin = membership.role === "admin";
+  if (force && !isRecorder && !isAdmin) {
+    return NextResponse.json({ error: "Only the recorder or an admin can regenerate the summary" }, { status: 403 });
+  }
 
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
