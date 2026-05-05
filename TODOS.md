@@ -2,6 +2,14 @@
 
 ## P1
 
+### Security audit — storage buckets and access control
+**What:** Verify that the `photos`, `audio`, and `artifacts` Supabase storage buckets are configured as intended (public vs. private), and that `getPublicUrl` is the correct access pattern for each. Also review the open items flagged during the v0.2.0.0 adversarial review:
+- Confirm bucket public/private status in Supabase dashboard — if private, replace `getPublicUrl` with a signed-URL or authenticated-URL pattern across all 6 call sites (`app/record/page.tsx`, `app/person/[id]/page.tsx`, `app/person/[id]/edit/page.tsx`, `app/add-photo/page.tsx`, `components/folio/AddMemoryModal.tsx`, `components/folio/TellMeModal.tsx`)
+- Add in-function `canEdit` guards to `saveSummary`, `saveTitle`, `saveDescription`, `saveDate`, and `saveRecorder` in `MemoryDetailClient.tsx` (currently only gated in JSX, RLS is the backstop)
+- Review all other API routes for consistent permission checks (recorder vs. admin vs. any family member)
+**Why:** These were flagged as low-to-medium severity during ship but not fixed — worth a dedicated pass before adding more users to the family.
+**Effort:** M (human: ~2h / CC: ~20 min)
+
 ## P2
 
 ### Soft-delete / trash for people
