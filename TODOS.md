@@ -36,6 +36,31 @@
 **Why:** The current node look doesn't match the rest of the app after the visual refresh.
 **Effort:** S (human: ~half day / CC: ~10 min)
 **Depends on:** Visual refresh (shipped)
+**Note:** Closed by v2 design pass (Tree v2 implementation).
+
+### Memory detail — Threads (topic tags)
+**What:** Topic/theme tag chips on the memory detail right rail (e.g. "Family · Russo line", "Childhood", "Brooklyn"). Needs a `memory_tags` table and tag assignment UI.
+**Why:** The v2 design mock shows these as a way to browse memories by theme across the archive.
+**Effort:** M (human: ~1 day / CC: ~20 min)
+**Depends on:** Memory detail v2 style pass (ships without this)
+
+### Mobile bottom nav bar
+**What:** A 5-item bottom navigation bar (Home / Tree / mic-FAB / People / Saved) to replace the current single sticky record button on mobile. FAB floats 18px above the bar.
+**Why:** The v2 design mock specifies this as the mobile chrome. The current sticky record button is functional but doesn't match the intended mobile navigation pattern.
+**Effort:** M (human: ~half day / CC: ~15 min)
+**Depends on:** Routes for "People" and "Saved" need to exist (stubs acceptable at first)
+
+### Mobile Home — responsive polish
+**What:** Responsive variant of Home: greeting shrinks to 36–44px, action row becomes 2×2 grid, story rows drop waveform, prompt card becomes full-width CTA.
+**Why:** The v2 design mock (screens/mobile.jsx) specifies these breakpoint changes.
+**Effort:** S (human: ~2h / CC: ~10 min)
+**Depends on:** Mobile bottom nav bar
+
+### Mobile Record — responsive polish
+**What:** Compact recording layout on mobile — transcript scrollable above fold, waveform + pause/stop controls pinned to bottom.
+**Why:** The v2 design mock specifies this layout for the recording flow.
+**Effort:** S (human: ~2h / CC: ~10 min)
+**Depends on:** Record right-rail (desktop, shipped first)
 
 ### Mention auto-detection in transcripts
 **What:** Typing `@` in a transcript opens a person picker; inserts as `@[Name](person:id)` markdown link that the renderer understands as a tagged person.

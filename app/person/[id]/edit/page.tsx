@@ -15,6 +15,7 @@ export default function EditPersonPage() {
     first_name: "",
     middle_name: "",
     last_name: "",
+    maiden_name: "",
     nickname: "",
     dob: "",
     dod: "",
@@ -35,6 +36,7 @@ export default function EditPersonPage() {
           first_name: data.first_name,
           middle_name: data.middle_name ?? "",
           last_name: data.last_name,
+          maiden_name: data.maiden_name ?? "",
           nickname: data.nickname ?? "",
           dob: data.dob ?? "",
           dod: data.dod ?? "",
@@ -77,6 +79,7 @@ export default function EditPersonPage() {
         first_name: form.first_name,
         middle_name: form.middle_name || null,
         last_name: form.last_name,
+        maiden_name: form.maiden_name || null,
         nickname: form.nickname || null,
         dob: form.dob || null,
         dod: form.dod || null,
@@ -146,6 +149,17 @@ export default function EditPersonPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Maiden Name (Née)</label>
+                <input
+                  value={form.maiden_name}
+                  onChange={(e) => set("maiden_name", e.target.value)}
+                  placeholder="Optional"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid placeholder:text-gray-300"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Nickname / Known As</label>
                 <input

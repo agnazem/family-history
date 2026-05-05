@@ -405,7 +405,7 @@ export function MemoryDetailClient({
                 value={titleDraft}
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-                className="flex-1 font-display text-[clamp(28px,5vw,56px)] leading-[1.05] tracking-[-0.02em] bg-transparent border-b-2 border-[--gold] outline-none text-[--ink]"
+                className="flex-1 font-display text-[clamp(40px,7vw,88px)] leading-[1.05] tracking-[-0.02em] bg-transparent border-b-2 border-[--gold] outline-none text-[--ink]"
               />
               <button onClick={saveTitle} className="p-2 text-[--gold] hover:text-[--ink] transition-colors">
                 <Check className="w-5 h-5" />
@@ -416,7 +416,7 @@ export function MemoryDetailClient({
             </div>
           ) : (
             <div className="flex-1 flex items-start gap-3 group">
-              <h1 className="font-display text-[clamp(28px,5vw,56px)] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">
+              <h1 className="font-display text-[clamp(40px,7vw,88px)] leading-[1.05] tracking-[-0.02em] font-normal text-[--ink]">
                 {memory.title}
               </h1>
               {canEdit && (
@@ -693,7 +693,7 @@ export function MemoryDetailClient({
                     <>
                       {/* Live / streaming: plain text only */}
                       {showLiveIndicator && (
-                        <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                        <p className="font-display text-[22px] font-light leading-[1.65] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
                           {memory.transcript || <span className="text-[--ink-mute] italic">Transcribing…</span>}
                         </p>
                       )}
@@ -710,20 +710,20 @@ export function MemoryDetailClient({
                                 onClick={() => audioPlayerRef.current?.seekTo(para.startTime)}
                                 className={`group relative rounded-lg px-3 py-2 cursor-pointer transition-colors ${
                                   isActive
-                                    ? "bg-[--accent-soft]"
+                                    ? "bg-[--accent-soft] border-l-2 border-[--accent]"
                                     : "hover:bg-[--surface-alt]"
                                 }`}
                               >
-                                <span
-                                  className={`block font-mono text-[10px] tracking-[0.04em] mb-1 transition-opacity ${
-                                    isActive
-                                      ? "text-[--accent] opacity-100"
-                                      : "text-[--gold] opacity-0 group-hover:opacity-100"
-                                  }`}
-                                >
-                                  {fmtTime(para.startTime)}
-                                </span>
-                                <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                                <p className="font-display text-[22px] font-light leading-[1.65] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                                  <span
+                                    className={`font-mono text-[11px] tracking-[0.06em] mr-3 transition-opacity ${
+                                      isActive
+                                        ? "text-[--accent] opacity-100"
+                                        : "text-[--ink-mute] opacity-0 group-hover:opacity-100"
+                                    }`}
+                                  >
+                                    {fmtTime(para.startTime)}
+                                  </span>
                                   {para.text}
                                 </p>
                               </div>
@@ -740,13 +740,13 @@ export function MemoryDetailClient({
                           onBlur={commitTranscript}
                           placeholder={memory.transcript_status === "none" ? "No transcript yet. You can type one here." : ""}
                           rows={Math.max(12, transcriptDraft.split("\n").length + 2)}
-                          className="w-full min-h-[20rem] text-[17px] leading-[1.55] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
+                          className="w-full min-h-[20rem] font-display text-[22px] font-light leading-[1.65] text-[--ink] bg-transparent resize-y outline-none placeholder:text-[--ink-mute] max-w-[60ch] border border-transparent hover:border-[--rule] focus:border-[--gold] rounded-lg px-2 -mx-2 py-1 transition-colors"
                         />
                       )}
 
                       {/* Plain text — non-audio memories or when audio has no duration yet */}
                       {!showLiveIndicator && !showClickable && !showTextarea && (
-                        <p className="text-[17px] leading-[1.55] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
+                        <p className="font-display text-[22px] font-light leading-[1.65] text-[--ink] max-w-[60ch] whitespace-pre-wrap">
                           {memory.transcript || (
                             <span className="text-[--ink-mute] italic">
                               {memory.transcript_status === "none" ? "No transcript yet." : "Transcribing…"}
@@ -809,6 +809,30 @@ export function MemoryDetailClient({
                     <dd className="text-[--ink] mt-0.5">{fmtDuration(memory.duration_sec)}</dd>
                   </div>
                 )}
+
+                {/* Place & time */}
+                <div className="pt-1 border-t border-[--rule]">
+                  <dt className="text-[--ink-mute] text-[12px] font-mono uppercase tracking-[0.04em] mb-1">Place &amp; time</dt>
+                  <dd className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-[--ink-mute] w-14">Year</span>
+                      <span className="text-[14px] font-medium text-[--ink]">
+                        {(() => {
+                          const d = memory.date_of_memory || memory.recorded_at;
+                          return d ? new Date(d).getFullYear() : "—";
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-[--ink-mute] w-14">Place</span>
+                      <span className="text-[14px] font-medium text-[--ink]">—</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-[--ink-mute] w-14">Season</span>
+                      <span className="text-[14px] font-medium text-[--ink]">—</span>
+                    </div>
+                  </dd>
+                </div>
 
                 {/* Recorded by — editable */}
                 <div>
@@ -880,9 +904,11 @@ export function MemoryDetailClient({
 
             {/* Comments */}
             <div className="bg-[--surface] border border-[--rule] rounded-xl p-5">
-              <p className="eyebrow mb-3">
-                Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
-              </p>
+              <div className="flex items-baseline gap-4 mb-4">
+                <h3 className="font-display italic text-[24px] font-normal text-[--ink] leading-none">Family said</h3>
+                <div className="flex-1 h-px bg-[--rule]" />
+                {comments.length > 0 && <span className="eyebrow">{comments.length}</span>}
+              </div>
 
               {topLevelComments.length > 0 && (
                 <div className="space-y-4 mb-4">
@@ -1061,7 +1087,11 @@ export function MemoryDetailClient({
           </div>
 
           <div className="bg-[--surface] border border-[--rule] rounded-xl p-5">
-            <p className="eyebrow mb-3">Comments{comments.length > 0 ? ` · ${comments.length}` : ""}</p>
+            <div className="flex items-baseline gap-4 mb-4">
+              <h3 className="font-display italic text-[24px] font-normal text-[--ink] leading-none">Family said</h3>
+              <div className="flex-1 h-px bg-[--rule]" />
+              {comments.length > 0 && <span className="eyebrow">{comments.length}</span>}
+            </div>
             {topLevelComments.length > 0 && (
               <div className="space-y-4 mb-4">
                 {topLevelComments.map((c) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 
 function fmt(secs: number): string {
@@ -8,6 +8,13 @@ function fmt(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function deterministicWaveform(src: string, count: number): number[] {
+  return Array.from({ length: count }, (_, i) => {
+    const code = src.charCodeAt(i % Math.max(src.length, 1));
+    return ((code * 13 + i * 7) % 75) + 15;
+  });
 }
 
 export interface AudioPlayerRef {
@@ -28,11 +35,12 @@ export const AudioPlayer = forwardRef<AudioPlayerRef, AudioPlayerProps>(
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(NaN);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    // Keep latest onTimeUpdate in a ref so the audio event handler doesn't go stale
     const onTimeUpdateRef = useRef(onTimeUpdate);
     useEffect(() => { onTimeUpdateRef.current = onTimeUpdate; }, [onTimeUpdate]);
     const onDurationChangeRef = useRef(onDurationChange);
     useEffect(() => { onDurationChangeRef.current = onDurationChange; }, [onDurationChange]);
+
+    const waveHeights = useMemo(() => deterministicWaveform(src, 64), [src]);
 
     useImperativeHandle(ref, () => ({
       seekTo(time: number) {
@@ -48,9 +56,6 @@ export const AudioPlayer = forwardRef<AudioPlayerRef, AudioPlayerProps>(
       audio.preload = "metadata";
 
       function resolveInfiniteDuration() {
-        // Some servers (e.g. Supabase Storage) stream audio without Content-Length,
-        // causing the browser to report duration=Infinity. Seeking past the end
-        // forces a range request that reveals the true duration.
         if (audio.duration === Infinity || isNaN(audio.duration)) {
           audio.currentTime = 1e101;
         } else {
@@ -114,51 +119,79 @@ export const AudioPlayer = forwardRef<AudioPlayerRef, AudioPlayerProps>(
 
     return (
       <div
-        className={`flex flex-col gap-1.5 ${className}`}
+        className={`flex items-center gap-6 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-1">
+        {/* Circular play button */}
+        <button
+          type="button"
+          onClick={togglePlay}
+          className="w-20 h-20 rounded-full bg-[--accent] text-white flex items-center justify-center flex-shrink-0 hover:opacity-90 active:scale-95 transition-all"
+          style={{ boxShadow: "0 8px 24px -8px rgba(139,94,60,0.6)" }}
+          title={playing ? "Pause" : "Play"}
+        >
+          {playing ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-0.5" />}
+        </button>
+
+        {/* Progress + waveform column */}
+        <div className="flex-1 min-w-0">
+          {/* Time + scrub bar */}
+          <div className="flex items-center gap-3 mb-2.5 font-mono text-[12px] tracking-[0.06em]">
+            <span className="text-[--accent] tabular-nums w-9 text-right">{fmt(currentTime)}</span>
+            <div className="relative flex-1 h-1 bg-[--surface-alt] rounded-full">
+              <div
+                className="absolute inset-y-0 left-0 bg-[--accent] rounded-full"
+                style={{ width: `${progress * 100}%` }}
+              />
+              <div
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[--accent]"
+                style={{ left: `${progress * 100}%` }}
+              />
+              <input
+                type="range" min={0} max={1} step={0.001} value={progress}
+                onChange={handleSeek}
+                disabled={isNaN(duration)}
+                aria-label="Seek"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+              />
+            </div>
+            <span className="text-[--ink-mute] tabular-nums">{isNaN(duration) ? "--:--" : fmt(duration)}</span>
+          </div>
+
+          {/* Waveform bars */}
+          <div className="flex items-end gap-px h-9 w-full overflow-hidden">
+            {waveHeights.map((h, i) => {
+              const active = (i / waveHeights.length) <= progress;
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-[1px] transition-colors ${active ? "bg-[--accent]" : "bg-[--rule]"}`}
+                  style={{ height: `${h}%` }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Skip controls */}
+        <div className="flex gap-1.5 flex-shrink-0">
           <button
             type="button"
             onClick={() => skip(-15)}
-            className="flex items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-xs font-medium"
-            title="Back 15 seconds"
+            className="w-9 h-9 rounded-full border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] flex items-center justify-center transition-colors"
+            title="Back 15s"
           >
-            <SkipBack className="w-3.5 h-3.5" />
-            15s
-          </button>
-          <button
-            type="button"
-            onClick={togglePlay}
-            className="flex items-center justify-center w-11 h-11 rounded-full hover:bg-black/10 transition-colors"
-            title={playing ? "Pause" : "Play"}
-          >
-            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            <SkipBack className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => skip(15)}
-            className="flex items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-black/10 transition-colors text-xs font-medium"
-            title="Forward 15 seconds"
+            className="w-9 h-9 rounded-full border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] flex items-center justify-center transition-colors"
+            title="Forward 15s"
           >
-            15s
-            <SkipForward className="w-3.5 h-3.5" />
+            <SkipForward className="w-4 h-4" />
           </button>
-          <span className="ml-1 text-xs font-mono opacity-60 tabular-nums">
-            {isNaN(duration) ? "--:--" : `${fmt(currentTime)} / ${fmt(duration)}`}
-          </span>
         </div>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.001}
-          value={progress}
-          onChange={handleSeek}
-          disabled={isNaN(duration)}
-          aria-label="Seek"
-          className="w-full h-1 accent-current cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        />
       </div>
     );
   }

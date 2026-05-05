@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import type React from "react";
 import { X, ArrowRight } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import type { Person } from "@/types";
@@ -16,6 +17,15 @@ interface PersonSidePanelProps {
 function formatYear(dateStr: string | null) {
   if (!dateStr) return null;
   return new Date(dateStr).getFullYear();
+}
+
+function LegendRow({ dot, label }: { dot: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2.5 text-[13px] text-[--ink-soft]">
+      <div className="w-5 flex items-center justify-center flex-shrink-0">{dot}</div>
+      {label}
+    </div>
+  );
 }
 
 export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile, onSetAsRoot }: PersonSidePanelProps) {
@@ -94,6 +104,17 @@ export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile, o
             {blurb}
           </p>
         )}
+      </div>
+
+      {/* Legend */}
+      <div className="px-5 pb-4 border-t border-[--rule] pt-4">
+        <p className="eyebrow mb-3">Legend</p>
+        <div className="space-y-2">
+          <LegendRow dot={<div className="w-4 h-4 rounded-full bg-[--accent]" />} label="Living" />
+          <LegendRow dot={<div className="w-4 h-4 rounded-full bg-[--surface-alt] border border-[--rule]" />} label="Deceased" />
+          <LegendRow dot={<div className="w-4 h-4 rounded-full border-2 border-[--accent]" />} label="Focused" />
+          <LegendRow dot={<div className="w-4 border-t border-dashed border-[--ink-mute]" />} label="Partnership" />
+        </div>
       </div>
 
       {/* Footer */}

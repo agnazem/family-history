@@ -8,7 +8,7 @@ import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { PersonSidePanel } from "@/components/tree/PersonSidePanel";
 import { AddPersonPanel } from "@/components/tree/AddPersonPanel";
 import { AddRelationshipPanel } from "@/components/tree/AddRelationshipPanel";
-import { BookOpen, UserPlus, GitMerge, LayoutDashboard, Search, X, Users, MousePointer2 } from "lucide-react";
+import { BookOpen, UserPlus, GitMerge, LayoutDashboard, Search, X, Users, MousePointer2, Network } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
 import { SearchModal } from "@/components/search/SearchModal";
 import { Spinner } from "@/components/ui/Spinner";
@@ -34,6 +34,9 @@ export default function TreePage() {
   const [requestingPermission, setRequestingPermission] = useState<PermissionKey | null>(null);
   // Local root person ID — optimistically updated on set-as-root
   const [localRootId, setLocalRootId] = useState<string | null>(null);
+  // Lineage mode state
+  const [lineageModeEnabled, setLineageModeEnabled] = useState(false);
+  const [subjectPersonId, setSubjectPersonId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -73,9 +76,13 @@ export default function TreePage() {
 
   const handleNodeClick = useCallback(
     (personId: string) => {
-      setSelectedPersonId((prev) => (prev === personId ? null : personId));
+      if (lineageModeEnabled) {
+        setSubjectPersonId(personId);
+      } else {
+        setSelectedPersonId((prev) => (prev === personId ? null : personId));
+      }
     },
-    []
+    [lineageModeEnabled]
   );
 
   async function handleAutoLayout() {
@@ -173,6 +180,28 @@ export default function TreePage() {
       <div className="w-px h-4 bg-[--rule] mx-0.5" />
 
       <button
+        onClick={() => {
+          setLineageModeEnabled((v) => {
+            const next = !v;
+            if (next && !subjectPersonId && localRootId) setSubjectPersonId(localRootId);
+            if (!next) setSubjectPersonId(null);
+            return next;
+          });
+        }}
+        className={`flex items-center gap-1.5 border text-sm p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors text-[13px] ${
+          lineageModeEnabled
+            ? "bg-[--accent-soft] border-[--accent] text-[--accent]"
+            : "border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt]"
+        }`}
+        title="Highlight lineage"
+      >
+        <Network className="w-4 h-4 flex-shrink-0" />
+        <span className="hidden sm:inline">{lineageModeEnabled ? "Lineage on" : "Lineage"}</span>
+      </button>
+
+      <div className="w-px h-4 bg-[--rule] mx-0.5" />
+
+      <button
         onClick={() => canEditTree ? setShowAddPerson(true) : setRequestingPermission("can_edit_tree")}
         className="flex items-center gap-1.5 bg-[--accent] hover:bg-[--accent-hover] text-white text-[13px] p-2 sm:px-3 sm:py-1.5 rounded-lg transition-colors"
         title="Add Person"
@@ -240,8 +269,11 @@ export default function TreePage() {
             onNodeClick={handleNodeClick}
             memoryCounts={memoryCounts}
             selectMode={selectMode}
-            selectedPersonId={selectedPersonId}
+            selectedPersonId={lineageModeEnabled ? null : selectedPersonId}
             rootPersonId={localRootId}
+            lineageModeEnabled={lineageModeEnabled}
+            subjectPersonId={subjectPersonId}
+            onClearSubject={() => setSubjectPersonId(localRootId ?? null)}
           />
         )}
         {selectedPersonId && (() => {

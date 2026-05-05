@@ -19,7 +19,7 @@ export function SundayPromptCard({ question, flourishWord, helper, beginHref = "
       <div className="p-7 flex gap-6 items-center">
         <div className="flex-1 min-w-0">
           <p className="eyebrow text-[--accent] mb-2.5">Prompt for today</p>
-          <p className="font-display font-normal text-[26px] leading-[1.2] tracking-[-0.01em] text-[--ink] mb-3">
+          <p className="font-display font-normal text-[28px] leading-[1.2] tracking-[-0.01em] text-[--ink] mb-3">
             &ldquo;
             {parts.map((part, i) =>
               part.toLowerCase() === flourishWord?.toLowerCase()
