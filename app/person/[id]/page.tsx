@@ -16,9 +16,10 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { RequestAccessModal } from "@/components/ui/RequestAccessModal";
 import type { PermissionKey } from "@/types";
 import { Spinner } from "@/components/ui/Spinner";
-import { Pencil, Plus, GitMerge, UserPlus, Camera, Trash2, Mic, TreePine } from "lucide-react";
+import { Pencil, Plus, GitMerge, UserPlus, Camera, Trash2, Mic, TreePine, ChevronLeft, ChevronRight } from "lucide-react";
 import { AppNav } from "@/components/ui/AppNav";
 import { useFamily } from "@/lib/hooks/useFamily";
+import { preferredFirst, personDisplayName } from "@/lib/utils";
 import type { Person, Relationship } from "@/types";
 
 type TabId = "memories" | "timeline" | "photos" | "letters" | "relationships";
@@ -59,6 +60,10 @@ export default function PersonPage() {
   const [requestingPermission, setRequestingPermission] = useState<PermissionKey | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("memories");
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const familyScrollRef = useRef<HTMLDivElement>(null);
+  function scrollFamily(dir: -1 | 1) {
+    familyScrollRef.current?.scrollBy({ left: dir * 220, behavior: "smooth" });
+  }
 
   const isAdmin = currentMember?.role === "admin";
   const canEditTree = isAdmin || currentMember?.can_edit_tree === true;
@@ -174,7 +179,7 @@ export default function PersonPage() {
     ...grouped.spouses.map((r) => ({ rel: r, group: "spouses" })),
     ...grouped.children.map((r) => ({ rel: r, group: "children" })),
     ...grouped.siblings.map((r) => ({ rel: r, group: "siblings" })),
-  ].slice(0, 4);
+  ];
 
   const hasRelationships = Object.values(grouped).some((g) => g.length > 0);
 
@@ -192,7 +197,7 @@ export default function PersonPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-2 font-mono text-[11px] tracking-[0.06em] uppercase text-[--ink-mute]">
           <button onClick={() => router.push("/tree")} className="hover:text-[--ink] transition-colors">People</button>
           <span>›</span>
-          <span className="text-[--ink]">{person.first_name}</span>
+          <span className="text-[--ink]">{preferredFirst(person)}</span>
           <div className="flex-1" />
           {canEditTree && (
             <div className="flex items-center gap-1.5">
@@ -245,7 +250,7 @@ export default function PersonPage() {
                   style={{ border: "1px solid var(--rule)" }}
                 >
                   <span className="font-display text-[80px] font-normal text-[--accent] leading-none">
-                    {person.first_name[0]}
+                    {preferredFirst(person)[0]}
                   </span>
                 </div>
               )}
@@ -284,10 +289,12 @@ export default function PersonPage() {
           {/* Name + facts + bio + CTAs */}
           <div>
             <p className="eyebrow mb-3">
-              {person.nickname ? `"${person.nickname}"` : `${grouped.parents.length > 0 ? "Known from family tree" : "Family member"}`}
+              {person.nickname
+                ? `${person.first_name} ${person.last_name}`
+                : grouped.parents.length > 0 ? "Known from family tree" : "Family member"}
             </p>
             <h1 className="font-display text-[clamp(48px,8vw,80px)] font-normal leading-[0.98] tracking-[-0.02em] text-[--ink]">
-              {person.first_name}
+              {preferredFirst(person)}
             </h1>
             <div className="font-display italic text-[clamp(32px,5vw,56px)] font-normal leading-[1] tracking-[-0.02em] text-[--ink-soft] mb-6">
               {person.last_name}
@@ -296,7 +303,7 @@ export default function PersonPage() {
             {/* Fact row */}
             <div className="flex gap-8 mb-6 flex-wrap">
               {birthYear && (
-                <FactItem label="Born" value={String(birthYear)} sub={person.dob ? undefined : undefined} />
+                <FactItem label="Born" value={String(birthYear)} />
               )}
               {person.maiden_name && (
                 <FactItem label="Née" value={person.maiden_name} italic />
@@ -310,7 +317,7 @@ export default function PersonPage() {
                   value={String(grouped.children.length)}
                   sub={grouped.children
                     .slice(0, 3)
-                    .map((r) => getOtherPerson(r)?.first_name)
+                    .map((r) => { const p = getOtherPerson(r); return p ? preferredFirst(p) : undefined; })
                     .filter(Boolean)
                     .join(", ")}
                 />
@@ -356,7 +363,7 @@ export default function PersonPage() {
         <PersonSummary
           personId={id}
           personName={fullName}
-          firstName={person.first_name}
+          firstName={preferredFirst(person)}
           dob={person.dob}
           dod={person.dod}
           bio={person.bio}
@@ -388,6 +395,65 @@ export default function PersonPage() {
         </div>
       </div>
 
+      {/* Family strip — always visible across all tabs */}
+      {allRelations.length > 0 && (
+        <div className="border-b border-[--rule] bg-[--canvas]">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
+            <div className="flex items-center gap-3 mb-4">
+              <h3 className="font-display italic text-[18px] font-normal text-[--ink] shrink-0">Family</h3>
+              <div className="flex-1 h-px bg-[--rule]" />
+              {allRelations.length > 3 && (
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => scrollFamily(-1)}
+                    className="p-1.5 rounded-lg border border-[--rule] text-[--ink-mute] hover:text-[--ink] hover:border-[--gold] transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => scrollFamily(1)}
+                    className="p-1.5 rounded-lg border border-[--rule] text-[--ink-mute] hover:text-[--ink] hover:border-[--gold] transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div
+              ref={familyScrollRef}
+              className="flex gap-5 overflow-x-auto pb-1"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {allRelations.map(({ rel, group }) => {
+                const other = getOtherPerson(rel);
+                if (!other) return null;
+                const otherBirth = other.dob ? new Date(other.dob).getFullYear() : null;
+                const otherDeath = other.dod ? new Date(other.dod).getFullYear() : null;
+                const years = otherBirth
+                  ? otherDeath
+                    ? `${otherBirth} — ${otherDeath}`
+                    : `${otherBirth} —`
+                  : null;
+                return (
+                  <button
+                    key={rel.id}
+                    onClick={() => router.push(`/person/${getOtherPersonId(rel)}`)}
+                    className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity shrink-0"
+                  >
+                    <Avatar src={other.profile_photo_url} name={personDisplayName(other)} size="md" />
+                    <div className="min-w-0 w-[140px]">
+                      <p className="eyebrow mb-0.5">{RELATION_LABELS[group]}</p>
+                      <p className="text-[15px] font-medium text-[--ink] truncate">{personDisplayName(other)}</p>
+                      {years && <p className="font-mono text-[11px] text-[--ink-mute]">{years}</p>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {activeTab === "memories" && (
@@ -407,7 +473,7 @@ export default function PersonPage() {
               <p className="text-[--ink-mute] text-sm">Loading memories…</p>
             ) : memories.length === 0 ? (
               <div className="text-center py-16 text-[--ink-mute]">
-                <p className="text-[17px] mb-2">No memories yet for {person.first_name}.</p>
+                <p className="text-[17px] mb-2">No memories yet for {preferredFirst(person)}.</p>
                 <p className="text-[14px]">Be the first to record a story, upload a photo, or share a note.</p>
               </div>
             ) : (
@@ -421,43 +487,6 @@ export default function PersonPage() {
                     <MemoryCard key={m.id} memory={m} taggedPeople={otherTagged} />
                   );
                 })}
-              </div>
-            )}
-
-            {/* Family section */}
-            {allRelations.length > 0 && (
-              <div className="mt-12">
-                <div className="flex items-baseline gap-4 mb-6">
-                  <h3 className="font-display italic text-[22px] font-normal text-[--ink]">Family</h3>
-                  <div className="flex-1 h-px bg-[--rule]" />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                  {allRelations.map(({ rel, group }) => {
-                    const other = getOtherPerson(rel);
-                    if (!other) return null;
-                    const otherBirth = other.dob ? new Date(other.dob).getFullYear() : null;
-                    const otherDeath = other.dod ? new Date(other.dod).getFullYear() : null;
-                    const years = otherBirth
-                      ? otherDeath
-                        ? `${otherBirth} — ${otherDeath}`
-                        : `${otherBirth} —`
-                      : null;
-                    return (
-                      <button
-                        key={rel.id}
-                        onClick={() => router.push(`/person/${getOtherPersonId(rel)}`)}
-                        className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
-                      >
-                        <Avatar src={other.profile_photo_url} name={`${other.first_name} ${other.last_name}`} size="md" />
-                        <div className="min-w-0">
-                          <p className="eyebrow mb-0.5">{RELATION_LABELS[group]}</p>
-                          <p className="text-[15px] font-medium text-[--ink] truncate">{other.first_name} {other.last_name}</p>
-                          {years && <p className="font-mono text-[11px] text-[--ink-mute]">{years}</p>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             )}
           </div>
@@ -509,8 +538,8 @@ export default function PersonPage() {
                               onClick={() => setSelectedRelationship(rel)}
                               className="flex items-center gap-2 bg-[--surface] border border-[--rule] hover:border-[--gold] rounded-xl px-3 py-2 transition-colors"
                             >
-                              <Avatar src={other.profile_photo_url} name={`${other.first_name} ${other.last_name}`} size="sm" />
-                              <p className="text-[15px] font-medium text-[--ink]">{other.first_name} {other.last_name}</p>
+                              <Avatar src={other.profile_photo_url} name={personDisplayName(other)} size="sm" />
+                              <p className="text-[15px] font-medium text-[--ink]">{personDisplayName(other)}</p>
                             </button>
                           );
                         })}

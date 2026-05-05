@@ -33,3 +33,13 @@ export function getDisplayName(
   if (!user) return "Unknown";
   return user.user_metadata?.full_name || user.email;
 }
+
+// Returns the preferred first name — nickname if set, otherwise first_name
+export function preferredFirst(person: { first_name: string; nickname?: string | null }): string {
+  return person.nickname?.trim() || person.first_name;
+}
+
+// Returns the preferred full display name for a person tile or label
+export function personDisplayName(person: { first_name: string; last_name: string; nickname?: string | null }): string {
+  return `${preferredFirst(person)} ${person.last_name}`;
+}

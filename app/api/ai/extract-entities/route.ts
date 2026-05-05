@@ -1,7 +1,12 @@
+import { createClient } from "@/lib/supabase/server";
 import { anthropic } from "@/lib/anthropic";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
@@ -37,7 +42,12 @@ Respond ONLY with valid JSON. Example: {"entities":[{"name":"Eleanor","type":"pe
     const content = response.content[0];
     if (content.type !== "text") return NextResponse.json({ entities: [] });
     const parsed = JSON.parse(content.text);
-    return NextResponse.json({ entities: parsed.entities ?? [] });
+    const entities = (parsed.entities ?? []).filter(
+      (e: unknown) => typeof e === "object" && e !== null &&
+        typeof (e as Record<string, unknown>).name === "string" &&
+        typeof (e as Record<string, unknown>).type === "string"
+    );
+    return NextResponse.json({ entities });
   } catch {
     return NextResponse.json({ entities: [] });
   }

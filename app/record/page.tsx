@@ -114,7 +114,7 @@ function RecordPageInner() {
 
   useEffect(() => {
     if (liveTranscript) fetchAiContext(liveTranscript);
-  }, [liveTranscript]);
+  }, [liveTranscript, fetchAiContext]);
 
   function handleRecorded(blob: Blob) {
     setAudioBlob(blob);

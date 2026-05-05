@@ -5,13 +5,16 @@ import { NextRequest, NextResponse } from "next/server";
 const SUMMARY_WORD_THRESHOLD = 300;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: memoryId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => ({})) as { force?: boolean };
+  const force = !!body.force;
 
   const { data: memory } = await supabase
     .from("memories")
@@ -23,8 +26,8 @@ export async function POST(
     return NextResponse.json({ error: "No transcript to summarize" }, { status: 400 });
   }
 
-  // Return cached summary immediately — idempotent
-  if (memory.transcript_summary) {
+  // Return cached summary unless caller is forcing a regeneration
+  if (memory.transcript_summary && !force) {
     return NextResponse.json({ summary: memory.transcript_summary });
   }
 

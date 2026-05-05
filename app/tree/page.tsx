@@ -34,8 +34,8 @@ export default function TreePage() {
   const [requestingPermission, setRequestingPermission] = useState<PermissionKey | null>(null);
   // Local root person ID — optimistically updated on set-as-root
   const [localRootId, setLocalRootId] = useState<string | null>(null);
-  // Lineage mode state
-  const [lineageModeEnabled, setLineageModeEnabled] = useState(false);
+  // Lineage mode state — on by default
+  const [lineageModeEnabled, setLineageModeEnabled] = useState(true);
   const [subjectPersonId, setSubjectPersonId] = useState<string | null>(null);
 
   const supabase = createClient();
@@ -44,6 +44,7 @@ export default function TreePage() {
   useEffect(() => {
     if (family?.root_person_id !== undefined) {
       setLocalRootId(family.root_person_id ?? null);
+      setSubjectPersonId((prev) => prev ?? family.root_person_id ?? null);
     }
   }, [family?.root_person_id]);
 
@@ -76,11 +77,8 @@ export default function TreePage() {
 
   const handleNodeClick = useCallback(
     (personId: string) => {
-      if (lineageModeEnabled) {
-        setSubjectPersonId(personId);
-      } else {
-        setSelectedPersonId((prev) => (prev === personId ? null : personId));
-      }
+      if (lineageModeEnabled) setSubjectPersonId(personId);
+      setSelectedPersonId((prev) => (prev === personId ? null : personId));
     },
     [lineageModeEnabled]
   );
@@ -184,7 +182,6 @@ export default function TreePage() {
           setLineageModeEnabled((v) => {
             const next = !v;
             if (next && !subjectPersonId && localRootId) setSubjectPersonId(localRootId);
-            if (!next) setSubjectPersonId(null);
             return next;
           });
         }}
@@ -269,7 +266,7 @@ export default function TreePage() {
             onNodeClick={handleNodeClick}
             memoryCounts={memoryCounts}
             selectMode={selectMode}
-            selectedPersonId={lineageModeEnabled ? null : selectedPersonId}
+            selectedPersonId={selectedPersonId}
             rootPersonId={localRootId}
             lineageModeEnabled={lineageModeEnabled}
             subjectPersonId={subjectPersonId}

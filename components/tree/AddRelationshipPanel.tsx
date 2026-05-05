@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/Modal";
+import { personDisplayName } from "@/lib/utils";
 import type { Person, RelationshipType } from "@/types";
 
 interface AddRelationshipPanelProps {
@@ -92,9 +93,7 @@ export function AddRelationshipPanel({
           >
             <option value="">Select person...</option>
             {sortedPeople.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.first_name} {p.last_name}
-              </option>
+              <option key={p.id} value={p.id}>{personDisplayName(p)}</option>
             ))}
           </select>
         </div>
@@ -112,9 +111,7 @@ export function AddRelationshipPanel({
             {sortedPeople
               .filter((p) => p.id !== personAId)
               .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.first_name} {p.last_name}
-                </option>
+                <option key={p.id} value={p.id}>{personDisplayName(p)}</option>
               ))}
           </select>
         </div>

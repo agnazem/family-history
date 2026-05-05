@@ -95,6 +95,7 @@ export interface Memory {
   recorded_at_note: string | null;
   transcript_status: TranscriptStatus;
   transcript_summary: string | null;
+  location: string | null;
   recorder?: {
     email: string;
     user_metadata: { full_name?: string };

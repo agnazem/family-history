@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type React from "react";
 import { X, ArrowRight } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { preferredFirst } from "@/lib/utils";
 import type { Person } from "@/types";
 
 interface PersonSidePanelProps {
@@ -47,6 +48,7 @@ export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile, o
       : null;
 
   const fullName = `${person.first_name} ${person.last_name}`;
+  const preferredName = preferredFirst(person);
   const blurb = person.ai_summary ?? person.bio ?? null;
 
   return (
@@ -72,7 +74,7 @@ export function PersonSidePanel({ person, memoryCount, onClose, onOpenProfile, o
           <Avatar src={person.profile_photo_url} name={fullName} size="md" />
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="font-display text-[26px] font-normal leading-none text-[--ink] tracking-[-0.02em]">
-              {person.first_name}
+              {preferredName}
             </div>
             <div className="font-display italic text-[18px] text-[--ink-soft] leading-tight mt-0.5">
               {person.last_name}

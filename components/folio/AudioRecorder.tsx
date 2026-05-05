@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Mic, Square, Play, Pause, Trash2, Loader2 } from "lucide-react";
 
 interface AudioRecorderProps {
-  onRecorded: (blob: Blob) => void;
+  onRecorded: (blob: Blob, durationSec: number) => void;
   onClear: () => void;
   recorded: Blob | null;
   // Streaming mode: if provided, chunks are POSTed live during recording
@@ -31,6 +31,7 @@ export function AudioRecorder({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seqRef = useRef(0);
+  const durationRef = useRef(0);
   const recordingIdRef = useRef(recordingId);
   useEffect(() => { recordingIdRef.current = recordingId; }, [recordingId]);
 
@@ -79,14 +80,15 @@ export function AudioRecorder({
 
     mr.onstop = () => {
       const blob = new Blob(allChunks.current, { type: mr.mimeType || mimeType || "audio/webm" });
-      onRecorded(blob);
+      onRecorded(blob, durationRef.current);
       stream.getTracks().forEach((t) => t.stop());
     };
 
     mr.start(recordingId ? 4000 : undefined);
     setRecording(true);
     setDuration(0);
-    timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+    durationRef.current = 0;
+    timerRef.current = setInterval(() => { durationRef.current += 1; setDuration((d) => d + 1); }, 1000);
   }
 
   function stopRecording() {
@@ -114,6 +116,7 @@ export function AudioRecorder({
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setPlaying(false);
     setDuration(0);
+    durationRef.current = 0;
     seqRef.current = 0;
     allChunks.current = [];
     onClear();

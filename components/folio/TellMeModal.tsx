@@ -304,6 +304,7 @@ export function TellMeModal({ open, onClose, person, familyPeople, onComplete }:
               storage_url: urlData.publicUrl,
               recorded_by: user.id,
               date_of_memory: null,
+              duration_sec: elapsedSecs > 0 ? elapsedSecs : null,
             })
             .select()
             .single();

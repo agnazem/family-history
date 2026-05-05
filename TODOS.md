@@ -31,12 +31,6 @@
 **Spec:** `handoff/CLAUDE.md` §3, `handoff/prompts-seed.md`
 **Depends on:** Phase 2 memory detail (shipped), transactional email setup
 
-### Tree visualization upgrade
-**What:** Update the `@xyflow/react` tree nodes to the Folio hairline aesthetic — cream surface, hairline border, name in Fraunces, dates in DM Mono. Connection lines: `stroke="#E0D2BB"`, `strokeWidth={1}`.
-**Why:** The current node look doesn't match the rest of the app after the visual refresh.
-**Effort:** S (human: ~half day / CC: ~10 min)
-**Depends on:** Visual refresh (shipped)
-**Note:** Closed by v2 design pass (Tree v2 implementation).
 
 ### Memory detail — Threads (topic tags)
 **What:** Topic/theme tag chips on the memory detail right rail (e.g. "Family · Russo line", "Childhood", "Brooklyn"). Needs a `memory_tags` table and tag assignment UI.
@@ -80,4 +74,20 @@
 **Effort:** M (human: ~1 day / CC: ~20 min)
 **Depends on:** Design token system stable (shipped)
 
+### Photos tab on person page may be redundant
+**What:** The Photos tab on a person's page surfaces photos tagged with that person. However, photos are already browsable on the Memories tab. Consider removing the Photos tab to reduce nav clutter and consolidate photo browsing under Memories.
+**Why:** Simpler navigation; photos are memories, so they belong on the Memories tab.
+**Effort:** XS (human: ~30 min / CC: ~5 min)
+**Depends on:** Confirm no user research showing Photos tab has distinct value
+
+### Redundant action buttons on record / present page
+**What:** The record flow and present (memory detail?) page have duplicate or redundant edit, delete, and record buttons that create visual clutter and confuse affordances.
+**Why:** Each action should appear once, in the most logical place.
+**Effort:** S (human: ~1h / CC: ~10 min)
+**Depends on:** Design audit of which buttons are truly needed per page state
+
 ## Done
+
+### Tree visualization upgrade
+**What:** Updated `@xyflow/react` tree nodes to the Folio hairline aesthetic — cream surface, hairline border, name in Fraunces, dates in DM Mono. Connection lines: `stroke="#E0D2BB"`, `strokeWidth={1}`.
+**Completed:** v0.2.0.0 (2026-05-04)

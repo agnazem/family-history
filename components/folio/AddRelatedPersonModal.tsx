@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
+import { personDisplayName } from "@/lib/utils";
 import type { Person } from "@/types";
 
 export type RelationIntent = "add_parent" | "add_child" | "add_sibling" | "add_spouse";
@@ -44,7 +45,7 @@ export function AddRelatedPersonModal({
   defaultOtherParentId = "",
   onAdded,
 }: Props) {
-  const [form, setForm] = useState({ first_name: "", last_name: "", dob: "", dod: "", bio: "" });
+  const [form, setForm] = useState({ first_name: "", last_name: "", maiden_name: "", dob: "", dod: "", bio: "" });
   const [otherParentId, setOtherParentId] = useState(defaultOtherParentId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export function AddRelatedPersonModal({
   }
 
   function handleClose() {
-    setForm({ first_name: "", last_name: "", dob: "", dod: "", bio: "" });
+    setForm({ first_name: "", last_name: "", maiden_name: "", dob: "", dod: "", bio: "" });
     setOtherParentId(defaultOtherParentId);
     setError(null);
     onClose();
@@ -76,6 +77,7 @@ export function AddRelatedPersonModal({
         family_id: familyId,
         first_name: form.first_name,
         last_name: form.last_name,
+        maiden_name: form.maiden_name || null,
         dob: form.dob || null,
         dod: form.dod || null,
         bio: form.bio || null,
@@ -129,7 +131,7 @@ export function AddRelatedPersonModal({
 
   return (
     <Modal open={open} onClose={handleClose} title={TITLE[intent]}>
-      <p className="text-xs text-gray-500 -mt-2 mb-4">{SUBTITLE[intent](currentPersonName)}</p>
+      <p className="text-xs text-[--ink-soft] mb-4">{SUBTITLE[intent](currentPersonName)}</p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -151,6 +153,15 @@ export function AddRelatedPersonModal({
             />
           </div>
         </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Maiden Name (Née)</label>
+          <input
+            value={form.maiden_name}
+            onChange={(e) => field("maiden_name", e.target.value)}
+            placeholder="Optional"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-mid placeholder:text-gray-300"
+          />
+        </div>
 
         {intent === "add_child" && otherPeople.length > 0 && (
           <div>
@@ -162,9 +173,7 @@ export function AddRelatedPersonModal({
             >
               <option value="">— none —</option>
               {otherPeople.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.first_name} {p.last_name}
-                </option>
+                <option key={p.id} value={p.id}>{personDisplayName(p)}</option>
               ))}
             </select>
           </div>

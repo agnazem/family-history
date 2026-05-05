@@ -2,6 +2,7 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Avatar } from "@/components/ui/Avatar";
+import { personDisplayName } from "@/lib/utils";
 import type { Person } from "@/types";
 
 export type NodeTier = "subject" | "direct" | "collateral";
@@ -16,9 +17,7 @@ export type PersonNodeData = Person & {
 
 export function PersonNode({ data }: NodeProps) {
   const person = data as unknown as PersonNodeData;
-  const displayName = person.nickname
-    ? `${person.first_name} "${person.nickname}" ${person.last_name}`
-    : `${person.first_name} ${person.last_name}`;
+  const displayName = personDisplayName(person);
   const fullName = `${person.first_name} ${person.last_name}`;
   const isDeceased = !!person.dod;
   const isFocused = !!person.isFocused;

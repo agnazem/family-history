@@ -1,7 +1,12 @@
+import { createClient } from "@/lib/supabase/server";
 import { anthropic } from "@/lib/anthropic";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
@@ -16,7 +21,7 @@ export async function POST(request: Request) {
   }
 
   const context = originalPrompt
-    ? `The original question was: "${originalPrompt}"\n\n`
+    ? `The original question was: "${originalPrompt.slice(0, 500)}"\n\n`
     : "";
 
   const response = await anthropic.messages.create({
