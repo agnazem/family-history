@@ -1,7 +1,12 @@
+import { createClient } from "@/lib/supabase/server";
 import { anthropic } from "@/lib/anthropic";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
@@ -9,25 +14,37 @@ export async function POST(request: Request) {
   const { transcript, personName, existingPeople } = await request.json() as {
     transcript: string;
     personName: string;
-    existingPeople: Array<{ id: string; first_name: string; last_name: string }>;
+    existingPeople: Array<{ id: string; first_name: string; last_name: string; nickname?: string | null; also_known_as?: string[] }>;
   };
 
   if (!transcript?.trim()) {
     return NextResponse.json({ error: "No transcript provided" }, { status: 400 });
   }
 
+  const safeTranscript = transcript.slice(0, 6000);
+  const safeName = String(personName ?? "").slice(0, 200);
+  const safePeople = (existingPeople ?? []).slice(0, 100);
+
   const peopleList =
-    existingPeople.length > 0
-      ? existingPeople
-          .map((p) => `- "${p.first_name} ${p.last_name}" (id: ${p.id})`)
+    safePeople.length > 0
+      ? safePeople
+          .map((p) => {
+            const name = `${p.first_name} ${p.last_name}`;
+            const akaNames = [
+              ...(p.nickname ? [p.nickname] : []),
+              ...(p.also_known_as ?? []),
+            ];
+            const aka = akaNames.length > 0 ? ` (also known as: ${akaNames.map((n) => `"${n}"`).join(", ")})` : "";
+            return `- "${name}"${aka} (id: ${p.id})`;
+          })
           .join("\n")
       : "None recorded yet.";
 
-  const prompt = `You are processing a voice memo recorded about a family member named "${personName}" for a family history application.
+  const prompt = `You are processing a voice memo recorded about a family member named "${safeName}" for a family history application.
 
 Transcript of the recording:
 """
-${transcript}
+${safeTranscript}
 """
 
 People already in this family tree (do not suggest creating these):
@@ -35,13 +52,13 @@ ${peopleList}
 
 Analyze the transcript and extract the following in JSON format:
 
-1. memories: Each distinct story, memory, or factual detail worth preserving as a separate record. Be generous — if the speaker describes multiple scenes or moments, split them. Each gets a clear title and a description written in the third person about ${personName}.
+1. memories: Each distinct story, memory, or factual detail worth preserving as a separate record. Be generous — if the speaker describes multiple scenes or moments, split them. Each gets a clear title and a description written in the third person about ${safeName}.
 
-2. new_people: People mentioned by name who are NOT in the existing family tree list above. Infer their relationship to ${personName} from context. "role" means their role relative to ${personName}: "parent" (they are ${personName}'s parent), "child" (they are ${personName}'s child), or "other" (spouse, sibling, cousin, friend, etc.).
+2. new_people: People mentioned by name who are NOT in the existing family tree list above. Infer their relationship to ${safeName} from context. "role" means their role relative to ${safeName}: "parent" (they are ${safeName}'s parent), "child" (they are ${safeName}'s child), or "other" (spouse, sibling, cousin, friend, etc.).
 
-3. relationships_to_existing: Any relationship explicitly stated between ${personName} and someone already in the family tree. Match names carefully to the list above and use their id. "role" follows the same convention as above.
+3. relationships_to_existing: Any relationship explicitly stated between ${safeName} and someone already in the family tree. Match names carefully to the list above and use their id. "role" follows the same convention as above.
 
-4. summary_contribution: 1–2 sentences capturing the essence of what was shared, suitable for adding to ${personName}'s biography.
+4. summary_contribution: 1–2 sentences capturing the essence of what was shared, suitable for adding to ${safeName}'s biography.
 
 Return ONLY valid JSON with no other text, matching this exact shape:
 {

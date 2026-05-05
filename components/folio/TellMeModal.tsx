@@ -234,7 +234,7 @@ export function TellMeModal({ open, onClose, person, familyPeople, onComplete }:
           personName: fullName,
           existingPeople: familyPeople
             .filter((p) => p.id !== person.id)
-            .map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name })),
+            .map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name, nickname: p.nickname ?? null, also_known_as: p.also_known_as ?? [] })),
         }),
       });
       const data = await res.json();
@@ -288,12 +288,11 @@ export function TellMeModal({ open, onClose, person, familyPeople, onComplete }:
 
       // Save audio as a memory if requested
       if (saveAudio && audioBlob) {
-        const path = `audio/${person.family_id}/${person.id}/${Date.now()}.webm`;
+        const path = `${person.family_id}/${person.id}/${Date.now()}.webm`;
         const { error: uploadErr } = await supabase.storage
-          .from("photos")
+          .from("audio")
           .upload(path, audioBlob, { upsert: true, contentType: "audio/webm" });
         if (!uploadErr) {
-          const { data: urlData } = supabase.storage.from("photos").getPublicUrl(path);
           const { data: mem } = await supabase
             .from("memories")
             .insert({
@@ -301,7 +300,7 @@ export function TellMeModal({ open, onClose, person, familyPeople, onComplete }:
               type: "audio",
               title: `Voice memo about ${firstName}`,
               description: transcript.trim() || null,
-              storage_url: urlData.publicUrl,
+              storage_url: `audio/${path}`,
               recorded_by: user.id,
               date_of_memory: null,
               duration_sec: elapsedSecs > 0 ? elapsedSecs : null,

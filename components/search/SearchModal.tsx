@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Search, X, User, Mic, Image as ImageIcon, FileText, PenLine } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { SignedImage } from "@/components/ui/SignedImage";
 import { personDisplayName } from "@/lib/utils";
-import Image from "next/image";
 import type { Memory, Person } from "@/types";
 
 interface SearchModalProps {
@@ -35,7 +35,8 @@ function normalize(s: string) {
 }
 
 function matchesPerson(p: Person, q: string) {
-  const n = normalize(`${p.first_name} ${p.last_name} ${p.nickname ?? ""} ${p.bio ?? ""}`);
+  const aka = (p.also_known_as ?? []).join(" ");
+  const n = normalize(`${p.first_name} ${p.last_name} ${p.nickname ?? ""} ${aka} ${p.bio ?? ""}`);
   return q.split(/\s+/).every((word) => n.includes(word));
 }
 
@@ -212,8 +213,8 @@ export function SearchModal({
                     {/* Thumbnail for photos, icon for everything else */}
                     {m.type === "photo" && m.storage_url ? (
                       <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                        <Image
-                          src={m.storage_url}
+                        <SignedImage
+                          storagePath={m.storage_url}
                           alt={m.title}
                           width={40}
                           height={40}
