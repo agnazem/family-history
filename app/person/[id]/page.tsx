@@ -77,10 +77,10 @@ export default function PersonPage() {
     if (!file || !person) return;
     setUploadingPhoto(true);
     const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `profiles/${person.family_id}/${id}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("photos").upload(path, file, { upsert: true });
+    const path = `${person.family_id}/${id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
     if (!uploadError) {
-      const { data } = supabase.storage.from("photos").getPublicUrl(path);
+      const { data } = supabase.storage.from("profile-photos").getPublicUrl(path);
       await supabase.from("people").update({ profile_photo_url: data.publicUrl }).eq("id", id);
       setPerson((prev) => prev ? { ...prev, profile_photo_url: data.publicUrl } : prev);
     }
@@ -164,13 +164,24 @@ export default function PersonPage() {
     return familyPeople.find((p) => p.id === getOtherPersonId(rel));
   }
 
-  // Compute age
-  const birthYear = person.dob ? new Date(person.dob).getFullYear() : null;
-  const deathYear = person.dod ? new Date(person.dod).getFullYear() : null;
-  const age = birthYear
-    ? deathYear
-      ? deathYear - birthYear
-      : new Date().getFullYear() - birthYear
+  // Year labels for display
+  const birthYear = person.dob ? new Date(person.dob + "T00:00:00Z").getUTCFullYear() : null;
+  const deathYear = person.dod ? new Date(person.dod + "T00:00:00Z").getUTCFullYear() : null;
+
+  // Age calculation accounts for whether the birthday has passed yet this year
+  function calcAge(dob: string, asOf: Date): number {
+    const birth = new Date(dob + "T00:00:00Z");
+    let years = asOf.getUTCFullYear() - birth.getUTCFullYear();
+    const hadBirthday =
+      asOf.getUTCMonth() > birth.getUTCMonth() ||
+      (asOf.getUTCMonth() === birth.getUTCMonth() && asOf.getUTCDate() >= birth.getUTCDate());
+    if (!hadBirthday) years--;
+    return years;
+  }
+  const age = person.dob
+    ? person.dod
+      ? calcAge(person.dob, new Date(person.dod + "T00:00:00Z"))
+      : calcAge(person.dob, new Date())
     : null;
 
   // Flat list of all related people for Family section

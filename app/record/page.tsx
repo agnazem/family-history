@@ -153,8 +153,7 @@ function RecordPageInner() {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("audio").getPublicUrl(path);
-    const storageUrl = urlData.publicUrl;
+    const storageUrl = `audio/${path}`;
 
     const personIdList = Array.from(taggedIds);
     if (personIdList.length > 0) {

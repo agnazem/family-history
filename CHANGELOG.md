@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0.0] - 2026-05-05
+
+### Added
+- **Private storage buckets**: audio, photos, and artifacts now stored in private Supabase buckets; all media served via short-lived signed URLs so files can't be guessed or scraped
+- **Also known as** (`also_known_as`): each person can now have multiple nicknames/aliases via a tag-chip input on the edit page; all aliases are included in person search and AI name-matching
+- **AI auto-tagging in voice memos**: after a recording stops, the app automatically calls the AI to detect which family members were mentioned in the transcript and pre-selects their chips (shown with a sparkle icon)
+- **Inline search in nav bar**: a compact search input appears in the top-right nav on desktop, lazily loading all people and memories on first focus and showing a dropdown of matched results
+- DB migration `015`: storage bucket policy changes for private audio/photo/artifact buckets
+- DB migration `016`: `also_known_as text[]` column on `people` table
+
+### Changed
+- **Archive stats card**: replaced the broken audio duration stat with a "generations represented" count derived from birth year spread
+- **People chips display**: memory modal chips now show the person's preferred display name (nickname-first) instead of the legal first name
+
+### Fixed
+- **Age calculation**: now correctly accounts for whether the birthday has passed this year (month + day comparison, not just year subtraction)
+- **AI family membership check**: `/api/ai/parse-recording` now verifies the caller belongs to the family before running the Claude prompt
+
 ## [0.2.0.0] - 2026-05-04
 
 ### Added

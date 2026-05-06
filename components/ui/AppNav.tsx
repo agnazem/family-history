@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { createClient } from "@/lib/supabase/client";
+import { NavSearch } from "@/components/ui/NavSearch";
 
 interface Props {
   rightSlot?: React.ReactNode;
@@ -61,8 +62,9 @@ export function AppNav({ rightSlot }: Props) {
           </nav>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {rightSlot}
+          <NavSearch />
           <button
             onClick={handleSignOut}
             className="p-2 text-[--ink-mute] hover:text-[--ink] rounded-lg hover:bg-[--surface-alt] transition-colors"

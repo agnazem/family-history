@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { AppNav } from "@/components/ui/AppNav";
-import { AudioPlayer } from "@/components/folio/AudioPlayer";
+import { SignedAudio } from "@/components/ui/SignedAudio";
+import { SignedImage } from "@/components/ui/SignedImage";
+import { SignedDownloadLink } from "@/components/ui/SignedDownloadLink";
 import {
-  Mic, Image as ImageIcon, FileText, PenLine, Download, Users,
+  Mic, Image as ImageIcon, FileText, PenLine, Users,
 } from "lucide-react";
 import { formatDate, personDisplayName } from "@/lib/utils";
 import type { Memory, Person } from "@/types";
-import Image from "next/image";
 import Link from "next/link";
 
 const TYPE_ICONS = {
@@ -160,13 +161,13 @@ export default function TimelinePage() {
                             </p>
 
                             {entry.type === "audio" && entry.storage_url && (
-                              <AudioPlayer src={entry.storage_url} className="mt-3" />
+                              <SignedAudio storagePath={entry.storage_url} className="mt-3" />
                             )}
 
                             {entry.type === "photo" && entry.storage_url && (
                               <div className="mt-3 rounded-lg overflow-hidden">
-                                <Image
-                                  src={entry.storage_url}
+                                <SignedImage
+                                  storagePath={entry.storage_url}
                                   alt={entry.title}
                                   width={400}
                                   height={300}
@@ -176,15 +177,10 @@ export default function TimelinePage() {
                             )}
 
                             {entry.type === "document" && entry.storage_url && (
-                              <a
-                                href={entry.storage_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <SignedDownloadLink
+                                storagePath={entry.storage_url}
                                 className="inline-flex items-center gap-1.5 mt-3 text-sm text-[--ink-soft] hover:text-[--ink] transition-colors"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                Download file
-                              </a>
+                              />
                             )}
 
                             {entry.transcript && (

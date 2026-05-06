@@ -14,12 +14,6 @@ export const dynamic = "force-dynamic";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtAudioDuration(totalSec: number): string {
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  if (h === 0) return m < 1 ? "<1m" : `${m}m`;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
 
 function relativeWhen(dateStr: string, now: Date): string {
   const d = new Date(dateStr);
@@ -96,15 +90,13 @@ export default async function HomePage() {
     { data: allMembers },
     { count: memCount },
     { count: peopleCount },
-    { data: audioRows },
     { data: recentContributions },
   ] = await Promise.all([
-    supabase.from("people").select("id, first_name, last_name, dob, dod, profile_photo_url").eq("family_id", familyId),
+    supabase.from("people").select("*").eq("family_id", familyId),
     supabase.from("memories").select("id, type, title, created_at, recorded_by, duration_sec, date_of_memory, description").eq("family_id", familyId).is("deleted_at", null).order("created_at", { ascending: false }).limit(6),
     supabase.from("family_members").select("user_id, display_name").eq("family_id", familyId),
     supabase.from("memories").select("id", { count: "exact", head: true }).eq("family_id", familyId).is("deleted_at", null),
     supabase.from("people").select("id", { count: "exact", head: true }).eq("family_id", familyId),
-    supabase.from("memories").select("duration_sec").eq("family_id", familyId).eq("type", "audio").is("deleted_at", null).not("duration_sec", "is", null),
     supabase.from("memories").select("recorded_by").eq("family_id", familyId).is("deleted_at", null).gte("created_at", thirtyDaysAgo),
   ]);
 
@@ -251,11 +243,15 @@ export default async function HomePage() {
 
   // ── Archive stats ─────────────────────────────────────────────────────────
 
-  const totalAudioSec = (audioRows ?? []).reduce((sum, r) => sum + (r.duration_sec ?? 0), 0);
-  const earliestDob = (people ?? [])
+  const birthYears = (people ?? [])
     .filter(p => p.dob)
     .map(p => new Date(p.dob! + "T00:00:00Z").getUTCFullYear())
-    .sort((a, b) => a - b)[0] ?? null;
+    .sort((a, b) => a - b);
+  const earliestDob = birthYears[0] ?? null;
+  const latestDob = birthYears[birthYears.length - 1] ?? null;
+  const generations = earliestDob && latestDob
+    ? Math.max(1, Math.floor((latestDob - earliestDob) / 25) + 1)
+    : (birthYears.length > 0 ? 1 : null);
 
   return (
     <div className="min-h-screen bg-[--canvas]">
@@ -312,7 +308,7 @@ export default async function HomePage() {
             <ArchiveStatsCard
               memories={memCount ?? 0}
               people={peopleCount ?? 0}
-              audioHumanized={totalAudioSec > 0 ? fmtAudioDuration(totalAudioSec) : "—"}
+              generations={generations}
               earliestYear={earliestDob}
             />
           </div>

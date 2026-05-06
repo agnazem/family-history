@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import type { TranscriptionSegment } from "openai/resources/audio/transcriptions";
+import { parseStoragePath } from "@/lib/storage";
 
 const PAUSE_THRESHOLD = 1.5;
 
@@ -51,16 +53,29 @@ export async function POST(
     .update({ transcript_status: "finalizing" })
     .eq("id", memoryId);
 
-  // Download the audio from storage
-  const audioRes = await fetch(memory.storage_url);
-  if (!audioRes.ok) {
+  // Download the audio from private storage using the service role key
+  const parsed = parseStoragePath(memory.storage_url);
+  if (!parsed) {
+    await supabase.from("memories").update({ transcript_status: "failed" }).eq("id", memoryId);
+    return NextResponse.json({ error: "Invalid storage path" }, { status: 400 });
+  }
+
+  const adminStorage = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: audioData, error: downloadError } = await adminStorage.storage
+    .from(parsed.bucket)
+    .download(parsed.path);
+
+  if (downloadError || !audioData) {
     await supabase.from("memories").update({ transcript_status: "failed" }).eq("id", memoryId);
     return NextResponse.json({ error: "Failed to fetch audio" }, { status: 502 });
   }
 
-  const audioBuffer = await audioRes.arrayBuffer();
-  const url = new URL(memory.storage_url);
-  const filename = url.pathname.split("/").pop() ?? "recording.webm";
+  const audioBuffer = await audioData.arrayBuffer();
+  const filename = parsed.path.split("/").pop() ?? "recording.webm";
   const ext = filename.split(".").pop() ?? "webm";
   const mimeMap: Record<string, string> = { mp4: "audio/mp4", ogg: "audio/ogg", mp3: "audio/mpeg", m4a: "audio/mp4" };
   const mimeType = mimeMap[ext] ?? "audio/webm";

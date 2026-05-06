@@ -192,8 +192,6 @@ export default function AddPhotoPage() {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("photos").getPublicUrl(path);
-
     const { error: insertError, data: inserted } = await supabase
       .from("memories")
       .insert({
@@ -201,7 +199,7 @@ export default function AddPhotoPage() {
         type: "photo",
         title: title.trim() || "Photo",
         description: description.trim() || null,
-        storage_url: urlData.publicUrl,
+        storage_url: `photos/${path}`,
         recorded_by: user.id,
         date_of_memory: dateOfMemory || null,
         location: exifLocation || null,

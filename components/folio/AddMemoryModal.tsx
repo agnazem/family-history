@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { AudioRecorder } from "./AudioRecorder";
 import { createClient } from "@/lib/supabase/client";
-import { Mic, Image as ImageIcon, FileText, PenLine, Check } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, PenLine, Check, Sparkles } from "lucide-react";
+import { personDisplayName } from "@/lib/utils";
 import type { MemoryType, Person } from "@/types";
 
 interface AddMemoryModalProps {
@@ -47,6 +48,11 @@ export function AddMemoryModal({
   const [transcriptStatus, setTranscriptStatus] = useState("none");
   const startedRef = useRef(false);
 
+  // Auto-tagging state
+  const [autoTagging, setAutoTagging] = useState(false);
+  const [autoTaggedIds, setAutoTaggedIds] = useState<Set<string>>(new Set());
+  const autoTagRanRef = useRef(false);
+
   const supabase = createClient();
   const otherPeople = familyPeople.filter((p) => p.id !== personId);
 
@@ -81,6 +87,49 @@ export function AddMemoryModal({
     return () => { supabase.removeChannel(channel); };
   }, [recordingId]);
 
+  // When the recording stops and we have a transcript, ask the AI who was mentioned
+  useEffect(() => {
+    if (!audioBlob || !liveTranscript.trim() || autoTagRanRef.current || otherPeople.length === 0) return;
+    autoTagRanRef.current = true;
+
+    const subjectPerson = familyPeople.find((p) => p.id === personId);
+    const subjectName = subjectPerson ? personDisplayName(subjectPerson) : "";
+
+    setAutoTagging(true);
+    fetch("/api/ai/parse-recording", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transcript: liveTranscript,
+        personName: subjectName,
+        familyId,
+        existingPeople: otherPeople.map((p) => ({
+          id: p.id,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          nickname: p.nickname ?? null,
+          also_known_as: p.also_known_as ?? [],
+        })),
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const mentioned = new Set<string>(
+          (data.relationships_to_existing ?? []).map((r: { person_id: string }) => r.person_id)
+        );
+        if (mentioned.size > 0) {
+          setAutoTaggedIds(mentioned);
+          setTaggedIds((prev) => {
+            const next = new Set(prev);
+            for (const id of mentioned) next.add(id);
+            return next;
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAutoTagging(false));
+  }, [audioBlob, liveTranscript]);
+
   function toggleTag(pid: string) {
     setTaggedIds((prev) => {
       const next = new Set(prev);
@@ -103,6 +152,9 @@ export function AddMemoryModal({
     setLiveTranscript("");
     setTranscriptStatus("none");
     startedRef.current = false;
+    setAutoTagging(false);
+    setAutoTaggedIds(new Set());
+    autoTagRanRef.current = false;
   }
 
   function handleClose() {
@@ -129,8 +181,7 @@ export function AddMemoryModal({
         .upload(path, audioBlob, { contentType: mime });
       if (uploadError) { setError(uploadError.message); setLoading(false); return; }
 
-      const { data: urlData } = supabase.storage.from("audio").getPublicUrl(path);
-      const storageUrl = urlData.publicUrl;
+      const storageUrl = `audio/${path}`;
 
       // Tag additional people
       const extraIds = Array.from(taggedIds).filter((id) => id !== personId);
@@ -162,8 +213,7 @@ export function AddMemoryModal({
       const path = `${familyId}/${personId}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file);
       if (uploadError) { setError(uploadError.message); setLoading(false); return; }
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-      storageUrl = data.publicUrl;
+      storageUrl = `${bucket}/${path}`;
     }
 
     const allTagged = [personId, ...Array.from(taggedIds)];
@@ -233,7 +283,12 @@ export function AddMemoryModal({
           <AudioRecorder
             recorded={audioBlob}
             onRecorded={(blob, dur) => { setAudioBlob(blob); setAudioDurationSec(dur); }}
-            onClear={() => { setAudioBlob(null); setAudioDurationSec(0); }}
+            onClear={() => {
+              setAudioBlob(null);
+              setAudioDurationSec(0);
+              setAutoTaggedIds(new Set());
+              autoTagRanRef.current = false;
+            }}
             recordingId={recordingId ?? undefined}
             liveTranscript={liveTranscript || undefined}
             transcriptStatus={transcriptStatus}
@@ -273,10 +328,25 @@ export function AddMemoryModal({
 
         {otherPeople.length > 0 && (
           <div>
-            <label className="block text-xs font-medium text-[--ink-soft] mb-2">Also tag family members</label>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-xs font-medium text-[--ink-soft]">Also tag family members</label>
+              {autoTagging && (
+                <span className="flex items-center gap-1 text-[11px] text-[--ink-mute]">
+                  <Sparkles className="w-3 h-3 animate-pulse" />
+                  Finding people mentioned…
+                </span>
+              )}
+              {!autoTagging && autoTaggedIds.size > 0 && (
+                <span className="flex items-center gap-1 text-[11px] text-[--accent]">
+                  <Sparkles className="w-3 h-3" />
+                  {autoTaggedIds.size} suggested
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {otherPeople.map((p) => {
                 const selected = taggedIds.has(p.id);
+                const suggested = autoTaggedIds.has(p.id);
                 return (
                   <button
                     key={p.id}
@@ -288,8 +358,9 @@ export function AddMemoryModal({
                         : "border-[--rule] text-[--ink-soft] hover:border-[--gold]"
                     }`}
                   >
-                    {selected && <Check className="w-3 h-3" />}
-                    {p.first_name} {p.last_name}
+                    {selected && !suggested && <Check className="w-3 h-3" />}
+                    {selected && suggested && <Sparkles className="w-3 h-3" />}
+                    {personDisplayName(p)}
                   </button>
                 );
               })}

@@ -56,6 +56,7 @@ export interface Person {
   middle_name: string | null;
   last_name: string;
   nickname: string | null;
+  also_known_as: string[];
   dob: string | null;
   dod: string | null;
   bio: string | null;
