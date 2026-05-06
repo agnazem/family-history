@@ -141,7 +141,7 @@ export default function TreePage() {
     <div className="flex items-center gap-1">
       <button
         onClick={() => setShowSearch(true)}
-        className="h-8 px-2 sm:px-3 flex items-center gap-1.5 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-[13px] rounded-lg transition-colors"
+        className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-[13px] leading-5 rounded-lg transition-colors"
         title="Search (⌘K)"
       >
         <Search className="w-4 h-4 flex-shrink-0" />
@@ -153,7 +153,7 @@ export default function TreePage() {
           <div className="w-px h-4 bg-[--rule] mx-0.5" />
           <button
             onClick={() => setSelectMode((s) => !s)}
-            className={`h-8 px-2 sm:px-3 flex items-center gap-1.5 border text-[13px] rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-2 py-1.5 sm:px-3 border text-[13px] leading-5 rounded-lg transition-colors ${
               selectMode
                 ? "bg-[--accent-soft] border-[--accent] text-[--accent]"
                 : "border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt]"
@@ -166,7 +166,7 @@ export default function TreePage() {
           <button
             onClick={handleAutoLayout}
             disabled={layouting || people.length === 0}
-            className="hidden sm:flex h-8 px-3 items-center gap-1.5 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-[13px] rounded-lg transition-colors disabled:opacity-40"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 border border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt] text-[13px] leading-5 rounded-lg transition-colors disabled:opacity-40"
             title={layouting ? "Laying out…" : "Auto layout"}
           >
             <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
@@ -185,7 +185,7 @@ export default function TreePage() {
             return next;
           });
         }}
-        className={`h-8 px-2 sm:px-3 flex items-center gap-1.5 border text-[13px] rounded-lg transition-colors ${
+        className={`flex items-center gap-1.5 px-2 py-1.5 sm:px-3 border text-[13px] leading-5 whitespace-nowrap rounded-lg transition-colors ${
           lineageModeEnabled
             ? "bg-[--accent-soft] border-[--accent] text-[--accent]"
             : "border-[--rule] text-[--ink-soft] hover:text-[--ink] hover:bg-[--surface-alt]"
@@ -200,7 +200,7 @@ export default function TreePage() {
 
       <button
         onClick={() => canEditTree ? setShowAddPerson(true) : setRequestingPermission("can_edit_tree")}
-        className="h-8 px-2 sm:px-3 flex items-center gap-1.5 bg-[--accent] hover:bg-[--accent-hover] text-white text-[13px] rounded-lg transition-colors"
+        className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 bg-[--accent] hover:bg-[--accent-hover] text-white text-[13px] leading-5 whitespace-nowrap rounded-lg transition-colors"
         title="Add Person"
       >
         <UserPlus className="w-4 h-4 flex-shrink-0" />
@@ -210,7 +210,7 @@ export default function TreePage() {
         <button
           onClick={() => setShowAddRelationship(true)}
           disabled={people.length < 2}
-          className="hidden sm:flex h-8 px-3 items-center gap-1.5 border border-[--accent] text-[--accent] hover:bg-[--accent-soft] text-[13px] rounded-lg transition-colors disabled:opacity-40"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 border border-[--accent] text-[--accent] hover:bg-[--accent-soft] text-[13px] leading-5 rounded-lg transition-colors disabled:opacity-40"
           title="Add Relationship"
         >
           <GitMerge className="w-4 h-4 flex-shrink-0" />
