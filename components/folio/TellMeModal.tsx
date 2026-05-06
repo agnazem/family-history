@@ -232,6 +232,7 @@ export function TellMeModal({ open, onClose, person, familyPeople, onComplete }:
         body: JSON.stringify({
           transcript: trimmed,
           personName: fullName,
+          familyId: person.family_id,
           existingPeople: familyPeople
             .filter((p) => p.id !== person.id)
             .map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name, nickname: p.nickname ?? null, also_known_as: p.also_known_as ?? [] })),

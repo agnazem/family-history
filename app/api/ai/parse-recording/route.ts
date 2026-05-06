@@ -11,11 +11,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "AI not configured" }, { status: 503 });
   }
 
-  const { transcript, personName, existingPeople } = await request.json() as {
+  const { transcript, personName, existingPeople, familyId } = await request.json() as {
     transcript: string;
     personName: string;
     existingPeople: Array<{ id: string; first_name: string; last_name: string; nickname?: string | null; also_known_as?: string[] }>;
+    familyId?: string;
   };
+
+  if (familyId) {
+    const { data: member } = await supabase
+      .from("family_members")
+      .select("user_id")
+      .eq("family_id", familyId)
+      .eq("user_id", user.id)
+      .single();
+    if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (!transcript?.trim()) {
     return NextResponse.json({ error: "No transcript provided" }, { status: 400 });

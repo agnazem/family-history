@@ -102,6 +102,7 @@ export function AddMemoryModal({
       body: JSON.stringify({
         transcript: liveTranscript,
         personName: subjectName,
+        familyId,
         existingPeople: otherPeople.map((p) => ({
           id: p.id,
           first_name: p.first_name,
