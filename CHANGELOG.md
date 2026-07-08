@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0.2] - 2026-07-08
+
+### Fixed
+- **Admin "add existing member" no longer fails under RLS**: adding an already-registered relative to a family used the anon client, which the `family_members` INSERT policy (self-joins only) rejected. The insert now uses the service-role client after the caller is verified as a family admin.
+- **Invited users with mixed-case emails are no longer locked out**: invitation emails are now normalized to lowercase before storage, and the `can_join_family` auto-join check compares emails case-insensitively. Previously an invite typed as `John.Doe@Gmail.com` would sign in successfully but silently receive no family access, and the invite stayed "pending" forever. The auth callback now surfaces a join failure instead of redirecting as success.
+
+### Security
+- **`is_family_member` / `is_family_admin` hardened**: both SECURITY DEFINER helpers now pin `search_path = public` (Supabase "function search_path mutable" lint). These functions back every RLS policy in the app.
+- **Storage DELETE policies made idempotent**: the migration 020 delete policies now drop-if-exists before recreation, so the migration can be safely re-applied.
+
 ## [0.3.0.1] - 2026-07-07
 
 ### Fixed

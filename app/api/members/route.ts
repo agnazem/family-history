@@ -78,7 +78,11 @@ export async function POST(request: Request) {
   }
 
   const display_name = (targetUser.user_metadata?.full_name as string | undefined) ?? null;
-  const { error } = await supabase
+  // Insert with the service-role client: the caller is a verified admin (requireAdmin
+  // above), but the family_members INSERT RLS policy only permits self-joins
+  // (auth.uid() = user_id). Adding *another* user is a legitimate admin action that
+  // the RLS policy intentionally doesn't cover, so it must bypass RLS here.
+  const { error } = await adminSupabase
     .from("family_members")
     .insert({ family_id: familyId, user_id: targetUser.id, role: "member", display_name });
 

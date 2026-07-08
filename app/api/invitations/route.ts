@@ -7,8 +7,12 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { email, familyId } = await request.json();
-  if (!email || !familyId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  const { email: rawEmail, familyId } = await request.json();
+  if (!rawEmail || !familyId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  // Normalize to lowercase: GoTrue lowercases auth.users.email, and the invite
+  // auto-join policy (can_join_family) matches invitations.email against it. Storing
+  // the raw, possibly mixed-case, address would silently lock the invitee out.
+  const email = rawEmail.toLowerCase();
 
   const { data: member } = await supabase
     .from("family_members")

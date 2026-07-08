@@ -26,12 +26,18 @@ export async function GET(request: Request) {
 
           if (!existing) {
             const displayName = (user.user_metadata?.full_name as string | undefined) ?? null;
-            await supabase.from("family_members").insert({
+            const { error: joinError } = await supabase.from("family_members").insert({
               family_id: familyId,
               user_id: user.id,
               role: "member",
               display_name: displayName,
             });
+            // If the auto-join is rejected (e.g. no matching pending invitation),
+            // surface it instead of redirecting to /tree as if it succeeded — an
+            // unhandled failure here leaves the user signed in with no family access.
+            if (joinError) {
+              return NextResponse.redirect(`${origin}/?error=join`);
+            }
           }
 
           // Mark the invitation as accepted
