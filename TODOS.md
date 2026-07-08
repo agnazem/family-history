@@ -1,13 +1,5 @@
 # TODOS
 
-## P0
-
-### Supabase outage resilience — stop the free-tier pause from recurring
-**What:** On 2026-07-08 the whole app returned 504 (`MIDDLEWARE_INVOCATION_TIMEOUT`): the Supabase project's hostname stopped resolving (NXDOMAIN) because the free-tier project auto-paused after ~2 months idle and its DNS was removed. Project has since been restored. To stop this recurring, either (a) upgrade to a paid Supabase tier so it never auto-pauses, and/or (b) add a lightweight health check / status indicator so the next backend outage surfaces as a clear message instead of a cryptic gateway timeout.
-**Why:** Free-tier pausing is an architectural failure mode, not a one-off — it recurs on any quiet stretch, and the symptom (site-wide 504) is opaque. PR #11 added a 3s middleware guard so an outage now degrades to redirects instead of hanging, but that treats the symptom; the backend still has to stay up.
-**Effort:** S (paid tier: minutes + ~$25/mo) or M (status/health page: human ~half day / CC ~20 min)
-**Status:** Supabase restored 2026-07-08; migrations 017–020 applied and RLS verified enforcing on all six tables. Only the resilience decision (paid tier vs. status/health page) remains open.
-
 ## P2
 
 ### API route authz — LOW defense-in-depth follow-ups
@@ -39,6 +31,12 @@
 **Depends on:** Core collaborative features stable (memories, comments, edit/delete)
 
 ## P3
+
+### Supabase outage resilience — revisit before public launch
+**What:** The 2026-07-08 site-wide 504 was caused by the free-tier Supabase project auto-pausing after ~2 months idle (hostname went NXDOMAIN). Options to prevent recurrence: (a) upgrade to a paid Supabase tier so it never auto-pauses, and/or (b) add a health check / status indicator so a backend outage shows a clear message instead of a cryptic gateway timeout.
+**Decision (2026-07-08):** Staying on free tier for now — the app is not yet public, so occasional auto-pause is acceptable. PR #11's 3s middleware guard already degrades an outage to clean redirects rather than a hang. **Revisit and upgrade before the app goes public**, when uptime starts to matter.
+**Effort:** S (paid tier: minutes + ~$25/mo) or M (status/health page: human ~half day / CC ~20 min)
+**Depends on:** Public launch (trigger to revisit)
 
 ### Sunday prompt
 **What:** A weekly question surfaced on home that drives recording between holidays. Every Sunday a new prompt becomes active; users can record a memory answering it. Prompt detail page shows all family answers. Archive at `/prompts`. Weekly email opt-in (8am local time). ~52 prompts seeded at launch.
