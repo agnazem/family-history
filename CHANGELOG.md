@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0.1] - 2026-07-07
+
+### Fixed
+- **Site-wide 504 resilience**: the auth check in middleware no longer hangs the entire site when Supabase is slow or unreachable. Previously an unguarded `supabase.auth.getUser()` on every request would run until Vercel killed it (`MIDDLEWARE_INVOCATION_TIMEOUT`), taking down every page. It now times out after 3s and treats the request as unauthenticated, so protected routes redirect cleanly and a backend outage degrades gracefully instead of 504-ing everything.
+
 ## [0.3.0.0] - 2026-05-05
 
 ### Added
