@@ -228,6 +228,7 @@ export function MemoryDetailClient({
   // Autosave transcript draft after 2s idle
   const saveTranscript = useCallback(
     debounce(async (text: string) => {
+      if (!canEdit) return;
       setTranscriptSaving(true);
       await supabase
         .from("memories")
@@ -238,7 +239,7 @@ export function MemoryDetailClient({
       if (transcriptSavedTimer.current) clearTimeout(transcriptSavedTimer.current);
       transcriptSavedTimer.current = setTimeout(() => setTranscriptSaved(false), 1500);
     }, 2000),
-    [memory.id]
+    [memory.id, canEdit]
   );
 
   function handleTranscriptChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -247,6 +248,7 @@ export function MemoryDetailClient({
   }
 
   async function commitTranscript() {
+    if (!canEdit) return;
     await supabase
       .from("memories")
       .update({ transcript: transcriptDraft, transcript_draft: null })
@@ -255,6 +257,7 @@ export function MemoryDetailClient({
   }
 
   async function saveSummary() {
+    if (!canEdit) return;
     setSavingSummary(true);
     await supabase
       .from("memories")
@@ -266,6 +269,7 @@ export function MemoryDetailClient({
   }
 
   async function regenerateSummary() {
+    if (!canEdit) return;
     setSummarizing(true);
     setEditingSummary(false);
     try {
@@ -281,6 +285,7 @@ export function MemoryDetailClient({
   }
 
   async function saveTitle() {
+    if (!canEdit) return;
     if (!titleDraft.trim()) return;
     await supabase
       .from("memories")
@@ -291,18 +296,21 @@ export function MemoryDetailClient({
   }
 
   async function saveDescription() {
+    if (!canEdit) return;
     await supabase.from("memories").update({ description: descriptionDraft || null }).eq("id", memory.id);
     setMemory((prev) => ({ ...prev, description: descriptionDraft || null }));
     setEditingDescription(false);
   }
 
   async function saveDate() {
+    if (!canEdit) return;
     await supabase.from("memories").update({ date_of_memory: dateDraft || null }).eq("id", memory.id);
     setMemory((prev) => ({ ...prev, date_of_memory: dateDraft || null }));
     setEditingDate(false);
   }
 
   async function saveTags() {
+    if (!canEdit) return;
     const originalIds = new Set(initialTaggedPeople.map((p) => p.id));
     const added = [...taggedIds].filter((id) => !originalIds.has(id));
     const removed = [...originalIds].filter((id) => !taggedIds.has(id));
@@ -325,6 +333,7 @@ export function MemoryDetailClient({
   }
 
   async function saveRecorder(userId: string) {
+    if (!canEdit) return;
     const member = familyMembers.find((m) => m.user_id === userId);
     await supabase.from("memories").update({ recorded_by: userId }).eq("id", memory.id);
     setMemory((prev) => ({ ...prev, recorded_by: userId }));
@@ -333,6 +342,7 @@ export function MemoryDetailClient({
   }
 
   async function handleRetranscribe() {
+    if (!canEdit) return;
     const savedTranscript = transcriptDraft;
     setConfirmingRetranscribe(false);
     setRetranscribing(true);
@@ -361,6 +371,7 @@ export function MemoryDetailClient({
   }
 
   async function handleUndoRetranscribe() {
+    if (!canEdit) return;
     if (!previousTranscript) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     const restored = previousTranscript;
@@ -374,6 +385,7 @@ export function MemoryDetailClient({
   }
 
   async function handleDelete() {
+    if (!canEdit) return;
     if (!confirmingDelete) { setConfirmingDelete(true); return; }
     await fetch(`/api/memories/${memory.id}`, { method: "DELETE" });
     router.back();
