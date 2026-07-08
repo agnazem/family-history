@@ -25,9 +25,20 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Guard the auth call: if Supabase is slow or unreachable, don't let the
+  // middleware hang until Vercel kills it (MIDDLEWARE_INVOCATION_TIMEOUT).
+  // On timeout/error, treat the request as unauthenticated so protected routes
+  // redirect cleanly instead of 504-ing every route.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("supabase.auth.getUser timed out")), 3000)
+    );
+    const result = await Promise.race([supabase.auth.getUser(), timeout]);
+    user = result.data.user;
+  } catch (err) {
+    console.error("[middleware] auth check failed, treating as unauthenticated:", err);
+  }
 
   const { pathname } = request.nextUrl;
 
