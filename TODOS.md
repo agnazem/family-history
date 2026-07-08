@@ -6,21 +6,7 @@
 **What:** On 2026-07-08 the whole app returned 504 (`MIDDLEWARE_INVOCATION_TIMEOUT`): the Supabase project's hostname stopped resolving (NXDOMAIN) because the free-tier project auto-paused after ~2 months idle and its DNS was removed. Project has since been restored. To stop this recurring, either (a) upgrade to a paid Supabase tier so it never auto-pauses, and/or (b) add a lightweight health check / status indicator so the next backend outage surfaces as a clear message instead of a cryptic gateway timeout.
 **Why:** Free-tier pausing is an architectural failure mode, not a one-off — it recurs on any quiet stretch, and the symptom (site-wide 504) is opaque. PR #11 added a 3s middleware guard so an outage now degrades to redirects instead of hanging, but that treats the symptom; the backend still has to stay up.
 **Effort:** S (paid tier: minutes + ~$25/mo) or M (status/health page: human ~half day / CC ~20 min)
-**Status:** Supabase restored 2026-07-08. Resilience decision still open.
-
-### Land the two open PRs
-**What:** #11 (`fix/middleware-auth-timeout-guard`) — 3s auth-call timeout guard in middleware, v0.3.0.1. #12 (`security/rls-and-client-guards`) — RLS enforcement, storage policy cleanup, client-side `canEdit` guards.
-**Why:** Both are reviewed and scoped to one phase each. #12's migrations need the (now restored) Supabase to apply against.
-**Effort:** XS (human: ~15 min / CC: ~5 min)
-**Depends on:** Supabase restored (done)
-
-## P1
-
-### Test framework + coverage on auth/permission paths
-**What:** The app has zero automated tests — the middleware 504 fix could only be verified with `tsc` + `next build`. Stand up a real test framework (Vitest + React Testing Library) with a CI workflow, then cover the highest-risk logic first: the middleware auth guard, the `canEdit` gating in `MemoryDetailClient`, and the `requireFamilyMember`/`requireFamilyAdmin` authz helpers.
-**Why:** The app is about to enforce RLS and add more family members — the auth/permission paths are exactly where a silent regression would leak data or lock people out. Tests make those safe to change.
-**Effort:** M (human: ~1 day / CC: ~30 min)
-**Depends on:** —
+**Status:** Supabase restored 2026-07-08; migrations 017–020 applied and RLS verified enforcing on all six tables. Only the resilience decision (paid tier vs. status/health page) remains open.
 
 ## P2
 
@@ -117,6 +103,19 @@
 **Depends on:** Design audit of which buttons are truly needed per page state
 
 ## Done
+
+### Site-wide 504 fix + security/test PRs landed and deployed
+**What:** Shipped and merged the three PRs that came out of the 504 investigation, in order #11 → #13 → #12, then deployed and verified in production.
+- #11 (`v0.3.0.1`) — 3s timeout guard around `supabase.auth.getUser()` in middleware so an unreachable Supabase degrades to redirects instead of `MIDDLEWARE_INVOCATION_TIMEOUT`.
+- #13 — Vitest + React Testing Library framework, CI workflow, 21 passing tests (lineage + utils).
+- #12 — security audit (RLS migrations, storage policy cleanup, client `canEdit` guards, API-route authz helpers).
+- Migrations 017–020 applied to the restored Supabase; RLS confirmed enforcing (anon reads return empty). Production healthy at `family-history-five.vercel.app`; logged-in read/write happy path verified.
+**Completed:** 2026-07-08
+
+### Test framework + coverage on auth/permission paths
+**What:** Stood up the project's first automated test framework — Vitest + @testing-library/react (happy-dom), `@/*` alias, CI (`tsc --noEmit` + `npm run test` on push/PR), `TESTING.md` + `CLAUDE.md` conventions. Converted the hand-rolled `lineage.test.ts` to real specs and added `lib/utils.test.ts`. 21 tests passing. Shipped in PR #13.
+**Note:** Dedicated auth-path tests (middleware guard, `canEdit`, `requireFamilyMember`/`requireFamilyAdmin`) are the natural next coverage target now that those files are on `main`.
+**Completed:** 2026-07-08
 
 ### Security audit — storage buckets and access control
 **What:** v0.2.0.0 adversarial-review follow-up, shipped across two commits on `security/rls-and-client-guards`.
