@@ -1,24 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireFamilyAdmin as requireAdmin } from "@/lib/supabase/authz";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>, familyId: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { user: null, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-
-  const { data: member } = await supabase
-    .from("family_members")
-    .select("role")
-    .eq("family_id", familyId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!member || member.role !== "admin") {
-    return { user: null, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-
-  return { user, error: null };
-}
 
 // GET /api/members?familyId=X — list members with email and display name
 export async function GET(request: Request) {

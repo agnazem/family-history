@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireFamilyMember } from "@/lib/supabase/authz";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -10,8 +11,16 @@ export async function POST(
 ) {
   const { id: memoryId } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: memory } = await supabase
+    .from("memories")
+    .select("family_id")
+    .eq("id", memoryId)
+    .single();
+  if (!memory) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const { error: authError } = await requireFamilyMember(supabase, memory.family_id);
+  if (authError) return authError;
 
   const formData = await req.formData();
   const chunk = formData.get("chunk") as Blob | null;

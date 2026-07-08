@@ -1,16 +1,38 @@
 # TODOS
 
+## P0
+
+### Supabase outage resilience — stop the free-tier pause from recurring
+**What:** On 2026-07-08 the whole app returned 504 (`MIDDLEWARE_INVOCATION_TIMEOUT`): the Supabase project's hostname stopped resolving (NXDOMAIN) because the free-tier project auto-paused after ~2 months idle and its DNS was removed. Project has since been restored. To stop this recurring, either (a) upgrade to a paid Supabase tier so it never auto-pauses, and/or (b) add a lightweight health check / status indicator so the next backend outage surfaces as a clear message instead of a cryptic gateway timeout.
+**Why:** Free-tier pausing is an architectural failure mode, not a one-off — it recurs on any quiet stretch, and the symptom (site-wide 504) is opaque. PR #11 added a 3s middleware guard so an outage now degrades to redirects instead of hanging, but that treats the symptom; the backend still has to stay up.
+**Effort:** S (paid tier: minutes + ~$25/mo) or M (status/health page: human ~half day / CC ~20 min)
+**Status:** Supabase restored 2026-07-08. Resilience decision still open.
+
+### Land the two open PRs
+**What:** #11 (`fix/middleware-auth-timeout-guard`) — 3s auth-call timeout guard in middleware, v0.3.0.1. #12 (`security/rls-and-client-guards`) — RLS enforcement, storage policy cleanup, client-side `canEdit` guards.
+**Why:** Both are reviewed and scoped to one phase each. #12's migrations need the (now restored) Supabase to apply against.
+**Effort:** XS (human: ~15 min / CC: ~5 min)
+**Depends on:** Supabase restored (done)
+
 ## P1
 
-### Security audit — storage buckets and access control
-**What:** Verify that the `photos`, `audio`, and `artifacts` Supabase storage buckets are configured as intended (public vs. private), and that `getPublicUrl` is the correct access pattern for each. Also review the open items flagged during the v0.2.0.0 adversarial review:
-- Confirm bucket public/private status in Supabase dashboard — if private, replace `getPublicUrl` with a signed-URL or authenticated-URL pattern across all 6 call sites (`app/record/page.tsx`, `app/person/[id]/page.tsx`, `app/person/[id]/edit/page.tsx`, `app/add-photo/page.tsx`, `components/folio/AddMemoryModal.tsx`, `components/folio/TellMeModal.tsx`)
-- Add in-function `canEdit` guards to `saveSummary`, `saveTitle`, `saveDescription`, `saveDate`, and `saveRecorder` in `MemoryDetailClient.tsx` (currently only gated in JSX, RLS is the backstop)
-- Review all other API routes for consistent permission checks (recorder vs. admin vs. any family member)
-**Why:** These were flagged as low-to-medium severity during ship but not fixed — worth a dedicated pass before adding more users to the family.
-**Effort:** M (human: ~2h / CC: ~20 min)
+### Test framework + coverage on auth/permission paths
+**What:** The app has zero automated tests — the middleware 504 fix could only be verified with `tsc` + `next build`. Stand up a real test framework (Vitest + React Testing Library) with a CI workflow, then cover the highest-risk logic first: the middleware auth guard, the `canEdit` gating in `MemoryDetailClient`, and the `requireFamilyMember`/`requireFamilyAdmin` authz helpers.
+**Why:** The app is about to enforce RLS and add more family members — the auth/permission paths are exactly where a silent regression would leak data or lock people out. Tests make those safe to change.
+**Effort:** M (human: ~1 day / CC: ~30 min)
+**Depends on:** —
 
 ## P2
+
+### API route authz — LOW defense-in-depth follow-ups
+**What:** Follow-ups from the API-route authz audit (branch `security/rls-and-client-guards`). None are exploitable today — RLS is the backstop and no service-role route is missing a manual check — but these routes delegate authz entirely to RLS or rate-limit nothing, so they're worth tightening:
+- `app/api/ai/summarize/route.ts` — writes `people.ai_summary` with no in-code authz (RLS-only). Add `requireFamilyMember` on the person's `family_id`.
+- `app/api/ai/extract-entities/route.ts`, `app/api/ai/next-prompts/route.ts` — authenticate but do no family check and touch no DB. Only risk is Anthropic API-cost abuse by any authenticated user. Consider a family-scope check and/or rate limiting.
+- `app/api/ai/parse-recording/route.ts` — family check only fires when the client sends `familyId` (L21); make it required or rate-limit.
+- `app/api/recordings/start/route.ts` — RLS-only INSERT gate; correct today, add explicit `requireFamilyMember` for consistency.
+**Why:** Defense-in-depth + LLM-cost protection. Deferred from the P1 pass, which fixed the MEDIUM finding (chunk/finalize) and shipped the shared `requireFamilyMember`/`requireFamilyAdmin` helpers.
+**Effort:** S (human: ~1h / CC: ~10 min)
+**Depends on:** `lib/supabase/authz.ts` helpers (shipped)
 
 ### Soft-delete / trash for people
 **What:** Extend the soft-delete pattern (already built for memories) to people. Add `deleted_at` to `people`, filter them out of the tree/search/person page, preserve relationships and memory tags on soft-delete (restore them on un-delete), and add a "Deleted People" section to `/settings/trash`.
@@ -95,6 +117,13 @@
 **Depends on:** Design audit of which buttons are truly needed per page state
 
 ## Done
+
+### Security audit — storage buckets and access control
+**What:** v0.2.0.0 adversarial-review follow-up, shipped across two commits on `security/rls-and-client-guards`.
+- Storage buckets: dropped legacy over-permissive read policies, tightened profile-photo writes to require family membership, and added owner/admin DELETE policies (migrations 017, 020). RLS enabled on all tables (018).
+- Added in-function `canEdit` guards to the `MemoryDetailClient` save functions (commit 25b312a).
+- Audited all 15 API routes for consistent authz. Result: no service-role route missing a manual check. Fixed the one MEDIUM finding — `recordings/[id]/chunk` and `finalize` had no in-code authz — by adding explicit `requireFamilyMember` checks. Introduced shared `lib/supabase/authz.ts` (`requireFamilyMember`/`requireFamilyAdmin`) and refactored `api/members` to use it. Remaining LOW/LLM-cost items tracked as a P2 follow-up.
+**Completed:** 2026-07-08
 
 ### Tree visualization upgrade
 **What:** Updated `@xyflow/react` tree nodes to the Folio hairline aesthetic — cream surface, hairline border, name in Fraunces, dates in DM Mono. Connection lines: `stroke="#E0D2BB"`, `strokeWidth={1}`.
